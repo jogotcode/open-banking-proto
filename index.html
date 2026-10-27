@@ -8,14 +8,23 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="toolbar">
-    <form id="search-form" class="search" autocomplete="off">
-      <input id="search-input" type="search" placeholder="Search a city (e.g. London, Tokyo, Chicago)" aria-label="Search a city" />
-      <button type="submit">Search</button>
+  <div id="map"></div>
+
+  <div class="topbar">
+    <form id="search-form" class="searchbox" autocomplete="off" role="search">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input id="search-input" type="text" placeholder="Search places, addresses or hubs" aria-label="Search places, addresses or hubs" />
+      <button id="search-clear" type="button" class="icon-btn" aria-label="Clear search" hidden>×</button>
       <ul id="suggestions" class="suggestions" hidden></ul>
     </form>
 
-    <div class="filter">
+    <div class="chips">
+      <button id="filter-toggle" type="button" class="chip-btn" aria-expanded="false">Value: All ▾</button>
+      <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate location</button>
+      <span id="location-status" class="chip-btn static">Location off</span>
+    </div>
+
+    <div id="filter-panel" class="card filter" hidden>
       <label>
         Min value
         <input id="min-value" type="range" min="0" max="100" value="0" />
@@ -26,18 +35,13 @@
         <input id="max-value" type="range" min="0" max="100" value="100" />
         <output id="max-label">$0</output>
       </label>
-      <span id="count" class="count"></span>
-      <button id="reset" type="button" class="secondary">Reset</button>
+      <div class="filter-foot">
+        <span id="count"></span>
+        <button id="reset" type="button" class="secondary">Reset</button>
+      </div>
     </div>
+  </div>
 
-    <div class="location">
-      <button id="locate" type="button" class="secondary">📍 Use my location</button>
-      <button id="pick-location" type="button" class="secondary" title="Prototype: set your location by clicking the map">Pick on map</button>
-      <span id="location-status" class="count">Location off</span>
-    </div>
-  </header>
-
-  <div id="map"></div>
   <div id="status" class="status" hidden></div>
 
   <dialog id="join-dialog" class="join-dialog" aria-label="Bubble details">

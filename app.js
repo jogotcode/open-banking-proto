@@ -18,22 +18,140 @@ function radiusFor(value) {
 }
 
 function colorFor(value) {
-  if (value >= 10_000_000) return "#22d39a";
-  if (value >= 1_000_000) return "#3fa7ff";
-  if (value >= 100_000) return "#a78bfa";
-  return "#f5a524";
+  if (value >= 10_000_000) return "#0f9d58";
+  if (value >= 1_000_000) return "#1a73e8";
+  if (value >= 100_000) return "#8e44ef";
+  return "#f29900";
 }
 
-// --- Map --------------------------------------------------------------------
+function formatDistance(km) {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString()} km`;
+}
 
-const map = L.map("map", { worldCopyJump: true, minZoom: 2 }).setView([25, 10], 2);
+// --- Map + basemaps ---------------------------------------------------------
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-  subdomains: "abcd",
-  maxZoom: 19,
-}).addTo(map);
+const map = L.map("map", {
+  worldCopyJump: true,
+  minZoom: 2,
+  zoomControl: false,
+}).setView([25, 10], 3);
+
+L.control.zoom({ position: "bottomright" }).addTo(map);
+
+// Place names drawn over satellite imagery; above the bubbles but click-through.
+map.createPane("labels");
+map.getPane("labels").style.zIndex = 450;
+map.getPane("labels").style.pointerEvents = "none";
+L.control.scale({ position: "bottomright", imperial: true }).addTo(map);
+
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+// All free, keyless tile sources built on real OpenStreetMap / satellite data.
+const BASEMAPS = {
+  map: {
+    label: "Map",
+    dark: false,
+    thumb: "https://a.basemaps.cartocdn.com/rastertiles/voyager/4/8/5.png",
+    layers: () => [
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: `${OSM_ATTR} &copy; <a href="https://carto.com/">CARTO</a>`,
+        subdomains: "abcd",
+        maxZoom: 20,
+      }),
+    ],
+  },
+  satellite: {
+    label: "Satellite",
+    dark: true,
+    thumb: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/4/5/8",
+    layers: () => [
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics",
+        maxZoom: 19,
+      }),
+      // Street and place names on top of the imagery, like Google's hybrid view.
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png", {
+        subdomains: "abcd",
+        maxZoom: 20,
+        pane: "labels",
+      }),
+    ],
+  },
+  terrain: {
+    label: "Terrain",
+    dark: false,
+    thumb: "https://a.tile.opentopomap.org/4/8/5.png",
+    layers: () => [
+      L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        attribution: `${OSM_ATTR}, SRTM &copy; <a href="https://opentopomap.org">OpenTopoMap</a>`,
+        subdomains: "abc",
+        maxZoom: 17,
+      }),
+    ],
+  },
+  dark: {
+    label: "Dark",
+    dark: true,
+    thumb: "https://a.basemaps.cartocdn.com/dark_all/4/8/5.png",
+    layers: () => [
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: `${OSM_ATTR} &copy; <a href="https://carto.com/">CARTO</a>`,
+        subdomains: "abcd",
+        maxZoom: 20,
+      }),
+    ],
+  },
+};
+
+let activeBasemap = null;
+let hubsReady = false;
+const basemapGroup = L.layerGroup().addTo(map);
+
+function setBasemap(key) {
+  const def = BASEMAPS[key];
+  basemapGroup.clearLayers();
+  def.layers().forEach((layer) => basemapGroup.addLayer(layer));
+  map.getContainer().classList.toggle("map-dark", def.dark);
+  activeBasemap = key;
+  layerButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.key === key));
+  if (hubsReady) hubs.forEach(styleHub); // joined ring color depends on the basemap
+  try {
+    localStorage.setItem("basemap", key);
+  } catch {}
+}
+
+const LayerControl = L.Control.extend({
+  options: { position: "bottomleft" },
+  onAdd() {
+    const el = L.DomUtil.create("div", "leaflet-bar layer-control");
+    el.innerHTML = Object.entries(BASEMAPS)
+      .map(
+        ([key, def]) =>
+          `<button type="button" data-key="${key}" title="${def.label}">
+             <span class="thumb" style="background-image:url('${def.thumb}')"></span>${def.label}
+           </button>`
+      )
+      .join("");
+    L.DomEvent.disableClickPropagation(el);
+    el.addEventListener("click", (e) => {
+      const key = e.target.closest("button")?.dataset.key;
+      if (key && key !== activeBasemap) setBasemap(key);
+    });
+    return el;
+  },
+});
+
+new LayerControl().addTo(map);
+const layerButtons = document.querySelectorAll(".layer-control button");
+
+let savedBasemap = null;
+try {
+  savedBasemap = localStorage.getItem("basemap");
+} catch {}
+setBasemap(BASEMAPS[savedBasemap] ? savedBasemap : "map");
+
+// --- Hubs -------------------------------------------------------------------
 
 // Coverage areas sit under the hub bubbles. They're real-world size, so they
 // only become visible once you zoom in toward a city.
@@ -46,8 +164,8 @@ for (const hub of hubs) {
   hub.coverage = L.circle([hub.lat, hub.lng], {
     radius: hub.radiusKm * 1000,
     color,
-    weight: 1,
-    opacity: 0.6,
+    weight: 1.5,
+    opacity: 0.7,
     dashArray: "6 6",
     fillColor: color,
     fillOpacity: 0.08,
@@ -57,7 +175,7 @@ for (const hub of hubs) {
     radius: radiusFor(hub.value),
     color,
     weight: 1.5,
-    opacity: 0.8,
+    opacity: 0.9,
     fillColor: color,
     fillOpacity: 0.3,
   }).bindTooltip(formatShort(hub.value), {
@@ -84,24 +202,44 @@ function styleHub(hub) {
   const joined = Subscriptions.get(hub.id);
   const inRange = isInRange(hub);
   hub.marker.setStyle({
-    color: joined ? "#ffffff" : colorFor(hub.value),
+    color: joined ? (BASEMAPS[activeBasemap].dark ? "#ffffff" : "#202124") : colorFor(hub.value),
     weight: joined ? 3 : inRange ? 2.5 : 1.5,
   });
   hub.marker.getElement()?.classList.toggle("hub-in-range", inRange);
   hub.marker.setTooltipContent(`${joined ? "✓ " : ""}${formatShort(hub.value)}`);
 }
 
+hubsReady = true;
+
+function hubsCovering(latlng) {
+  return hubs.filter((h) => map.distance(latlng, [h.lat, h.lng]) <= h.radiusKm * 1000);
+}
+
 // --- User location ----------------------------------------------------------
 
 let userLatLng = null;
+let watchId = null;
+let hasCentered = false;
+let inRangeIds = new Set();
+
+// Google-style blue dot with a translucent accuracy ring.
+const accuracyCircle = L.circle([0, 0], {
+  radius: 1,
+  color: "#1a73e8",
+  weight: 1,
+  opacity: 0.4,
+  fillColor: "#1a73e8",
+  fillOpacity: 0.12,
+  interactive: false,
+});
 const userMarker = L.circleMarker([0, 0], {
-  radius: 7,
+  radius: 8,
   color: "#fff",
-  weight: 2,
-  fillColor: "#ff4d6d",
+  weight: 3,
+  fillColor: "#1a73e8",
   fillOpacity: 1,
   interactive: false, // taps pass through to the bubble underneath
-}).bindTooltip("You", { permanent: true, direction: "top", offset: [0, -6] });
+});
 
 const locationStatus = document.getElementById("location-status");
 const pickBtn = document.getElementById("pick-location");
@@ -115,39 +253,102 @@ function isInRange(hub) {
   return distanceKm(hub) <= hub.radiusKm;
 }
 
-function setUserLocation(latlng, { fly = true } = {}) {
-  userLatLng = L.latLng(latlng);
-  userMarker.setLatLng(userLatLng).addTo(map);
-  hubs.forEach(styleHub);
-
-  const nearby = hubs.filter(isInRange);
-  locationStatus.textContent = nearby.length
-    ? `In range of ${nearby.length} bubble${nearby.length > 1 ? "s" : ""}`
-    : "No bubbles in range";
-
-  if (fly) {
-    const target = nearby[0];
-    if (target) map.flyToBounds(target.coverage.getBounds(), { maxZoom: 11 });
-    else map.flyTo(userLatLng, 8);
-  }
+// Bubbles you're inside that aren't hidden by the value filter.
+function visibleInRange() {
+  return hubs.filter((h) => bubbleLayer.hasLayer(h.marker) && isInRange(h));
 }
 
-function locateUser() {
+function updateLocationStatus() {
+  if (!userLatLng) return;
+  const n = visibleInRange().length;
+  const prefix = watchId === null ? "Simulated · " : "";
+  locationStatus.textContent = n ? `${prefix}In ${n} bubble${n > 1 ? "s" : ""}` : `${prefix}No bubbles here`;
+}
+
+function setUserLocation(latlng, { accuracy = 0 } = {}) {
+  userLatLng = L.latLng(latlng);
+  userMarker.setLatLng(userLatLng).addTo(map);
+  accuracyCircle.setLatLng(userLatLng).setRadius(accuracy);
+  if (accuracy) accuracyCircle.addTo(map);
+  else accuracyCircle.remove();
+  hubs.forEach(styleHub);
+
+  updateLocationStatus();
+  const nearby = visibleInRange();
+
+  // Let the user know when they walk into a bubble.
+  const entered = nearby.filter((h) => !inRangeIds.has(h.id));
+  if (entered.length && hasCentered) {
+    showStatus(`You're inside the ${entered[0].name} bubble — tap it to see how to join`);
+  }
+  inRangeIds = new Set(nearby.map((h) => h.id));
+}
+
+function centerOnUser() {
+  if (!userLatLng) return;
+  map.flyTo(userLatLng, Math.max(map.getZoom(), 14));
+}
+
+function startTracking() {
   if (!navigator.geolocation) {
-    showStatus("Location isn't available in this browser — use “Pick on map”");
+    showStatus("Location isn't available in this browser — use “Simulate location”");
     return;
   }
+  if (watchId !== null) {
+    centerOnUser();
+    return;
+  }
+  setPicking(false);
   locationStatus.textContent = "Locating…";
-  navigator.geolocation.getCurrentPosition(
-    (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-    () => {
-      locationStatus.textContent = "Location off";
-      showStatus("Couldn't get your location — use “Pick on map” to set one");
+  hasCentered = false;
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      locateControl.getContainer().classList.add("tracking");
+      setUserLocation([pos.coords.latitude, pos.coords.longitude], { accuracy: pos.coords.accuracy });
+      if (!hasCentered) {
+        hasCentered = true;
+        centerOnUser();
+        const here = visibleInRange();
+        if (here.length) showStatus(`You're inside the ${here[0].name} bubble — tap it to see how to join`);
+      }
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    (err) => {
+      // Once we have a fix, ride out transient GPS dropouts (tunnels, indoors)
+      // and keep the last known position; watchPosition keeps trying.
+      if (hasCentered && err.code !== err.PERMISSION_DENIED) return;
+      stopTracking();
+      locationStatus.textContent = "Location off";
+      showStatus(
+        err.code === err.PERMISSION_DENIED
+          ? "Location permission denied — use “Simulate location” to test"
+          : "Couldn't get your location — use “Simulate location” to test"
+      );
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
   );
 }
 
+function stopTracking() {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+  locateControl.getContainer().classList.remove("tracking");
+}
+
+const LocateControl = L.Control.extend({
+  options: { position: "bottomright" },
+  onAdd() {
+    const el = L.DomUtil.create("div", "leaflet-bar locate-control");
+    el.innerHTML =
+      '<button type="button" title="Show your location" aria-label="Show your location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/></svg></button>';
+    L.DomEvent.disableClickPropagation(el);
+    el.querySelector("button").addEventListener("click", startTracking);
+    return el;
+  },
+});
+
+const locateControl = new LocateControl().addTo(map);
+
+// Prototype helper: click the map to pretend you're somewhere else.
 function setPicking(on) {
   picking = on;
   pickBtn.classList.toggle("active", on);
@@ -155,14 +356,22 @@ function setPicking(on) {
   if (on) showStatus("Click anywhere on the map to set your location");
 }
 
-document.getElementById("locate").addEventListener("click", locateUser);
 pickBtn.addEventListener("click", () => setPicking(!picking));
 
 map.on("click", (e) => {
   if (!picking) return;
   setPicking(false);
-  setUserLocation(e.latlng, { fly: false });
+  stopTracking();
+  hasCentered = true;
+  setUserLocation(e.latlng);
 });
+
+// Start tracking right away if the user already granted location access;
+// otherwise wait for them to tap the locate button (avoids a prompt on load).
+navigator.permissions
+  ?.query({ name: "geolocation" })
+  .then((p) => p.state === "granted" && startTracking())
+  .catch(() => {});
 
 // --- Tapping a hub ----------------------------------------------------------
 
@@ -180,12 +389,12 @@ function onHubTap(hub) {
   const where = `<strong>${hub.name}</strong> · ${hub.purpose.title}<div class="popup-value">${formatMoney(hub.value)}</div>`;
   if (userLatLng) {
     const away = distanceKm(hub) - hub.radiusKm;
-    content.innerHTML = `${where}<p>You're ${Math.round(away).toLocaleString()} km outside this bubble. Get within ${hub.radiusKm} km of ${hub.name} to view details and join.</p>`;
+    content.innerHTML = `${where}<p>You're ${formatDistance(away)} outside this bubble. Get within ${hub.radiusKm} km of ${hub.name} to view details and join.</p>`;
   } else {
     content.innerHTML = `${where}<p>Share your location to see if you can join this bubble.</p><button type="button">Use my location</button>`;
     content.querySelector("button").addEventListener("click", () => {
       map.closePopup();
-      locateUser();
+      startTracking();
     });
   }
   L.popup({ maxWidth: 260 }).setLatLng([hub.lat, hub.lng]).setContent(content).openOn(map);
@@ -198,6 +407,14 @@ const maxInput = document.getElementById("max-value");
 const minLabel = document.getElementById("min-label");
 const maxLabel = document.getElementById("max-label");
 const countEl = document.getElementById("count");
+const filterToggle = document.getElementById("filter-toggle");
+const filterPanel = document.getElementById("filter-panel");
+
+filterToggle.addEventListener("click", () => {
+  filterPanel.hidden = !filterPanel.hidden;
+  filterToggle.setAttribute("aria-expanded", String(!filterPanel.hidden));
+  filterToggle.classList.toggle("active", !filterPanel.hidden);
+});
 
 function applyFilter() {
   // Keep the two thumbs from crossing.
@@ -210,6 +427,8 @@ function applyFilter() {
   const hi = sliderToValue(+maxInput.value);
   minLabel.textContent = formatShort(lo);
   maxLabel.textContent = formatShort(hi);
+  const filtered = +minInput.value > 0 || +maxInput.value < 100;
+  filterToggle.textContent = filtered ? `Value: ${formatShort(lo)} – ${formatShort(hi)} ▾` : "Value: All ▾";
 
   let shown = 0;
   for (const hub of hubs) {
@@ -221,6 +440,7 @@ function applyFilter() {
     }
   }
   countEl.textContent = `${shown} of ${hubs.length} hubs shown`;
+  updateLocationStatus();
 }
 
 minInput.addEventListener("input", applyFilter);
@@ -229,25 +449,28 @@ document.getElementById("reset").addEventListener("click", () => {
   minInput.value = 0;
   maxInput.value = 100;
   applyFilter();
-  map.flyTo([25, 10], 2);
 });
 
 applyFilter();
 
-// --- City search ------------------------------------------------------------
+// --- Search: hubs + real places ---------------------------------------------
 
 const form = document.getElementById("search-form");
 const input = document.getElementById("search-input");
+const clearBtn = document.getElementById("search-clear");
 const list = document.getElementById("suggestions");
 const statusEl = document.getElementById("status");
 let activeIndex = -1;
-let matches = [];
+let results = []; // [{ kind: "hub", hub } | { kind: "place", place }]
+let searchSeq = 0;
+let searchTimer = null;
+let placePin = null;
 
 function showStatus(msg) {
   statusEl.textContent = msg;
   statusEl.hidden = false;
   clearTimeout(showStatus.timer);
-  showStatus.timer = setTimeout(() => (statusEl.hidden = true), 3500);
+  showStatus.timer = setTimeout(() => (statusEl.hidden = true), 4000);
 }
 
 function matchHubs(query) {
@@ -256,22 +479,71 @@ function matchHubs(query) {
   return hubs
     .filter((h) => h.name.toLowerCase().includes(q) || h.country.toLowerCase().includes(q))
     .sort((a, b) => a.name.toLowerCase().indexOf(q) - b.name.toLowerCase().indexOf(q))
-    .slice(0, 8);
+    .slice(0, 4);
+}
+
+// Photon: free OpenStreetMap geocoder built for search-as-you-type.
+// Results are biased toward what's currently on screen.
+async function searchPlaces(query) {
+  const c = map.getCenter();
+  const params = new URLSearchParams({ q: query, limit: "6", lang: "en" });
+  if (map.getZoom() >= 5) {
+    params.set("lat", c.lat.toFixed(4));
+    params.set("lon", c.lng.toFixed(4));
+  }
+  const res = await fetch(`https://photon.komoot.io/api/?${params}`);
+  if (!res.ok) throw new Error(res.statusText);
+  const data = await res.json();
+  return data.features.map((f) => {
+    const p = f.properties;
+    const street = [p.housenumber, p.street].filter(Boolean).join(" ");
+    const name = p.name || street || p.city || p.country;
+    const sub = [p.name ? street : "", p.city !== name ? p.city : "", p.state, p.country]
+      .filter((s) => s && s !== name)
+      .join(", ");
+    return {
+      name,
+      sub,
+      type: p.osm_value,
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      extent: p.extent, // [west, north, east, south] for areas like cities
+    };
+  });
+}
+
+function iconFor(type) {
+  if (["city", "town", "village", "suburb", "neighbourhood", "state", "country"].includes(type)) return "🏙️";
+  if (["restaurant", "cafe", "fast_food", "bar", "supermarket"].includes(type)) return "🍴";
+  if (["bank", "atm"].includes(type)) return "🏦";
+  if (["station", "bus_stop", "aerodrome"].includes(type)) return "🚉";
+  return "📍";
 }
 
 function renderSuggestions() {
   list.innerHTML = "";
-  matches.forEach((hub, i) => {
+  results.forEach((r, i) => {
     const li = document.createElement("li");
     li.className = i === activeIndex ? "active" : "";
-    li.innerHTML = `<span>${hub.name}, ${hub.country}</span><span class="val">${formatShort(hub.value)}</span>`;
+    if (r.kind === "hub") {
+      li.innerHTML = `
+        <span class="sug-icon hub" style="--hub-color:${colorFor(r.hub.value)}"></span>
+        <span class="sug-text"><div class="sug-main">${escapeHtml(r.hub.name)} hub</div>
+          <div class="sug-sub">${escapeHtml(r.hub.purpose.title)} · ${escapeHtml(r.hub.country)}</div></span>
+        <span class="val">${formatShort(r.hub.value)}</span>`;
+    } else {
+      li.innerHTML = `
+        <span class="sug-icon">${iconFor(r.place.type)}</span>
+        <span class="sug-text"><div class="sug-main">${escapeHtml(r.place.name)}</div>
+          <div class="sug-sub">${escapeHtml(r.place.sub)}</div></span>`;
+    }
     li.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      goToHub(hub);
+      choose(r);
     });
     list.appendChild(li);
   });
-  list.hidden = matches.length === 0;
+  list.hidden = results.length === 0;
 }
 
 function hideSuggestions() {
@@ -279,36 +551,91 @@ function hideSuggestions() {
   activeIndex = -1;
 }
 
-function goToHub(hub) {
-  input.value = hub.name;
+function choose(r) {
   hideSuggestions();
+  input.blur();
+  if (r.kind === "hub") goToHub(r.hub);
+  else goToPlace(r.place);
+}
+
+function goToHub(hub) {
+  input.value = `${hub.name} hub`;
+  clearBtn.hidden = false;
+  placePin?.remove();
   if (!bubbleLayer.hasLayer(hub.marker)) {
     showStatus(`${hub.name}'s hub is hidden by the value filter`);
   }
-  map.flyToBounds(hub.coverage.getBounds(), { maxZoom: 11 });
+  map.flyToBounds(hub.coverage.getBounds(), { maxZoom: 12 });
 }
 
-// Cities without a hub fall back to OpenStreetMap geocoding.
-async function geocode(query) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(res.statusText);
-  const [result] = await res.json();
-  return result;
+const pinIcon = L.divIcon({
+  className: "place-pin",
+  html: '<svg width="28" height="40" viewBox="0 0 28 40"><path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 26 14 26s14-15.5 14-26C28 6.3 21.7 0 14 0z" fill="#ea4335"/><circle cx="14" cy="14" r="5" fill="#a50e0e"/></svg>',
+  iconSize: [28, 40],
+  iconAnchor: [14, 40],
+  popupAnchor: [0, -36],
+});
+
+function goToPlace(place) {
+  input.value = place.name;
+  clearBtn.hidden = false;
+
+  const latlng = L.latLng(place.lat, place.lng);
+  const covering = hubsCovering(latlng);
+  const bubbleNote = covering.length
+    ? `Inside the <strong>${covering.map((h) => escapeHtml(h.name)).join(", ")}</strong> bubble${covering.length > 1 ? "s" : ""}`
+    : "No bubble covers this place yet";
+  const fromYou = userLatLng ? ` · ${formatDistance(map.distance(userLatLng, latlng) / 1000)} from you` : "";
+
+  placePin?.remove();
+  placePin = L.marker(latlng, { icon: pinIcon })
+    .bindPopup(
+      `<div class="place-popup"><strong>${escapeHtml(place.name)}</strong>
+         <div class="popup-sub">${escapeHtml(place.sub)}${fromYou}</div>
+         <p>${bubbleNote}</p></div>`
+    )
+    .addTo(map);
+
+  if (place.extent) {
+    const [w, n, e, s] = place.extent;
+    map.flyToBounds([[s, w], [n, e]], { maxZoom: 16 });
+  } else {
+    map.flyTo(latlng, 16);
+  }
+  map.once("moveend", () => placePin?.openPopup());
 }
 
 input.addEventListener("input", () => {
-  matches = matchHubs(input.value);
+  const query = input.value.trim();
+  clearBtn.hidden = !input.value;
+  results = matchHubs(query).map((hub) => ({ kind: "hub", hub }));
   activeIndex = -1;
   renderSuggestions();
+
+  clearTimeout(searchTimer);
+  if (query.length < 3) return;
+  const seq = ++searchSeq;
+  searchTimer = setTimeout(async () => {
+    try {
+      const places = await searchPlaces(query);
+      if (seq !== searchSeq) return; // a newer search is in flight
+      results = [
+        ...matchHubs(query).map((hub) => ({ kind: "hub", hub })),
+        ...places.map((place) => ({ kind: "place", place })),
+      ];
+      if (document.activeElement === input) renderSuggestions();
+    } catch {
+      // Network hiccup: keep showing hub matches.
+    }
+  }, 250);
 });
 
 input.addEventListener("keydown", (e) => {
   if (list.hidden) return;
   if (e.key === "ArrowDown") {
-    activeIndex = (activeIndex + 1) % matches.length;
+    activeIndex = (activeIndex + 1) % results.length;
   } else if (e.key === "ArrowUp") {
-    activeIndex = (activeIndex - 1 + matches.length) % matches.length;
+    activeIndex = (activeIndex - 1 + results.length) % results.length;
   } else if (e.key === "Escape") {
     hideSuggestions();
     return;
@@ -320,28 +647,32 @@ input.addEventListener("keydown", (e) => {
 });
 
 input.addEventListener("blur", hideSuggestions);
+input.addEventListener("focus", () => results.length && renderSuggestions());
+
+clearBtn.addEventListener("click", () => {
+  input.value = "";
+  clearBtn.hidden = true;
+  results = [];
+  hideSuggestions();
+  placePin?.remove();
+  placePin = null;
+  input.focus();
+});
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const query = input.value.trim();
   if (!query) return;
 
-  const hub = activeIndex >= 0 ? matches[activeIndex] : matchHubs(query)[0];
-  if (hub) {
-    goToHub(hub);
-    return;
-  }
+  if (activeIndex >= 0) return choose(results[activeIndex]);
+  if (results.length) return choose(results[0]);
 
   hideSuggestions();
   showStatus(`Searching for "${query}"…`);
   try {
-    const place = await geocode(query);
-    if (!place) {
-      showStatus(`No results for "${query}"`);
-      return;
-    }
-    map.flyTo([+place.lat, +place.lon], 10);
-    showStatus(`No hub in ${place.display_name.split(",")[0]} yet`);
+    const [place] = await searchPlaces(query);
+    if (place) goToPlace(place);
+    else showStatus(`No results for "${query}"`);
   } catch {
     showStatus("Search failed — check your connection");
   }

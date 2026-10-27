@@ -1,24 +1,31 @@
 # open-banking-proto
 
-Prototype of a financial hub map.
+Prototype of a financial hub map with a Google-Maps-style interface, built on real OpenStreetMap data.
 
-- World map with translucent "hub" bubbles; each hub has a (random, for now) monetary value. Bubble size and color scale with value.
-- Search bar: type a city to jump to its hub (with suggestions). Cities without a hub are geocoded via OpenStreetMap.
-- Min/max value sliders hide bubbles outside the chosen range.
-- Each bubble covers a real area (dashed circle, visible when zoomed in). Users must be inside that area to join:
-  - **Use my location** uses browser geolocation; **Pick on map** sets a location by clicking (for testing anywhere).
-  - In-range bubbles pulse. Tapping one opens a dialog with why the bubble was formed, the monthly fee, how transactions are approved (committee, first come first served, restricted spending, member vote) and its rules.
-  - **Subscribe** (or **Request to join** for application-only bubbles) saves the subscription in the browser as pending until payment info is added on the account page (not built yet). Joined bubbles get a white ring and ✓.
-  - Tapping an out-of-range bubble shows how far outside it you are.
+## Features
+
+- **Real map data, four views** (switcher bottom-left): Map (detailed streets, CARTO Voyager), Satellite (Esri imagery with place labels), Terrain (OpenTopoMap) and Dark. All free and keyless. The choice is remembered.
+- **Live location**: the locate button (bottom-right) tracks you continuously with a blue dot and accuracy ring, like Google Maps. It starts automatically if location access was already granted. You get a notice when you walk into a bubble.
+- **Search anything**: addresses, landmarks, businesses and cities via the Photon geocoder (OpenStreetMap), biased toward the area on screen, plus hub matches. A chosen place gets a pin showing whether a bubble covers it and how far it is from you.
+- **Hub bubbles**: translucent circles with a (random, for now) monetary value; size and color scale with value. Each bubble covers a real area (dashed circle, visible when zoomed in).
+- **Value filter**: the "Value" chip opens min/max sliders that hide bubbles outside the range.
+- **Joining a bubble**: you must be inside its area. Tapping an in-range bubble opens a dialog with why it was formed, the monthly fee, how transactions are approved (committee, first come first served, restricted spending, member vote) and its rules. **Subscribe** (or **Request to join** for application-only bubbles) saves the subscription in the browser as pending until payment info is added on the account page (not built yet). Tapping an out-of-range bubble shows how far outside it you are.
+- **Simulate location** (prototype helper): click the map to pretend you're somewhere else.
 - Hub details are randomly generated but seeded by city name, so they stay the same across reloads.
 
 ## Run
 
-No build step — it's static HTML/JS using Leaflet from a CDN.
+No build step. It's static HTML/JS using Leaflet from a CDN.
 
 ```sh
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, bubbles, location, search, filter).
+Browsers only allow location on `localhost` or HTTPS, so host it on HTTPS when testing on a phone.
+
+Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, basemaps, location, search, filter).
+
+## Notes for production
+
+The free tile and search services used here have fair-use limits (OpenTopoMap and Photon in particular). For real traffic, switch to a paid provider such as Google Maps Platform, Mapbox or MapTiler. The tile URLs live in `BASEMAPS` and search in `searchPlaces()` in `app.js`.
