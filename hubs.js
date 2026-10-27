@@ -74,6 +74,12 @@ const PURPOSES = [
     category: "repairs",
     impact: "get {city} homes and cars fixed fast",
   },
+  {
+    title: "Kids' Shoes & Clothing Fund",
+    why: "Parents in {city} started this bubble so growing kids always have shoes and clothes that fit.",
+    category: "shoes and clothing",
+    impact: "keep {city} kids in shoes that fit",
+  },
 ];
 
 // How transactions get approved.
@@ -94,7 +100,7 @@ const APPROVAL_STYLES = [
     type: "restricted",
     label: "Restricted spending",
     describe: (h) =>
-      `Only ${h.purpose.category} purchases are accepted. Matching requests are approved automatically; anything else is declined.`,
+      `Members get a ${h.purpose.category} card they can use right away: up to ${formatMoney(h.perPurchaseLimit)} per purchase and ${formatMoney(h.monthlyAllowance)} a month. Other purchases are declined.`,
   },
   {
     type: "member-vote",
@@ -135,7 +141,11 @@ const hubs = CITIES.map(([name, country, lat, lng]) => {
     committeeSize: pick(rand, [3, 5, 7]),
     maxRequest: 50 * Math.round(2 + rand() * 38),
     joinPolicy: rand() < 0.65 ? "open" : "application",
+    // Fund rules set by the hub's creator.
+    cardDays: pick(rand, [7, 14, 30]), // how long a granted virtual card lasts
+    perPurchaseLimit: pick(rand, [25, 50, 75, 100]), // restricted hubs' category card
   };
+  hub.monthlyAllowance = hub.perPurchaseLimit * 4;
   hub.why = hub.purpose.why.replace("{city}", name);
   hub.impact = hub.purpose.impact.replace("{city}", name);
   hub.approvalText = hub.approval.describe(hub);

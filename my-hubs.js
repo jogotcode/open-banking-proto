@@ -49,7 +49,7 @@ function paidWith(sub) {
   return method ? `<span class="paid-with">Paid with ${escapeHtml(paymentLabel(method))}</span>` : "";
 }
 
-function commitmentBlock(sub, info) {
+function commitmentBlock(hub, sub, info) {
   if (sub.status === "pending-review") {
     return `<p class="commit-note">Your one-month commitment starts once you're approved.</p>`;
   }
@@ -59,7 +59,9 @@ function commitmentBlock(sub, info) {
   }
   if (sub.status === "cancelling") return "";
   if (info.unlocked) {
-    return `<p class="commit-note done">✓ Commitment complete — you can now make requests.</p>`;
+    return `<p class="commit-note done">✓ Commitment complete — ${
+      hub.approval.type === "restricted" ? `your ${escapeHtml(hub.purpose.category)} card is ready.` : "you can now request funds."
+    }</p>`;
   }
   return `
     <div class="commit">
@@ -72,6 +74,18 @@ function commitmentBlock(sub, info) {
       </div>
       <p class="commit-note">You can start making requests on ${formatDate(info.commitmentEnds)}.</p>
     </div>`;
+}
+
+// Request funds (or open the spending card) once the first month is done.
+function fundsAction(hub, sub, info) {
+  if (!info.unlocked || !["active", "cancelling"].includes(sub.status)) return "";
+  if (hub.approval.type === "restricted") {
+    return `<button type="button" class="full" data-action="open-card" data-hub="${hub.id}">Use your ${escapeHtml(hub.purpose.category)} card</button>`;
+  }
+  const pending = openRequestFor(hub);
+  return pending
+    ? `<p class="commit-note">⏳ ${formatMoney(pending.amount)} request in review.</p>`
+    : `<button type="button" class="full" data-action="request" data-hub="${hub.id}">Request funds</button>`;
 }
 
 function cancelBlock(hub, sub, info) {
@@ -162,7 +176,8 @@ function renderMyHubs() {
             ${paidWith(sub)}
           </div>
           <p class="encourage">${escapeHtml(encouragement(hub, sub, info))}</p>
-          ${commitmentBlock(sub, info)}
+          ${commitmentBlock(hub, sub, info)}
+          ${fundsAction(hub, sub, info)}
           ${cancelBlock(hub, sub, info)}
         </article>`;
       })
@@ -170,7 +185,8 @@ function renderMyHubs() {
 }
 
 function openMyHubs(focusHubId) {
-  if (!filterPanel.hidden) filterToggle.click(); // both panels open in the same spot
+  if (!filterPanel.hidden) filterToggle.click(); // panels open in the same spot
+  if (typeof closeWallet === "function") closeWallet();
   renderMyHubs();
   myHubsPanel.hidden = false;
   myHubsToggle.classList.add("active");
@@ -213,6 +229,10 @@ myHubsBody.addEventListener("click", (e) => {
     case "resume":
       Subscriptions.resume(hub.id);
       return;
+    case "request":
+      return openRequest(hub);
+    case "open-card":
+      return openWallet(VirtualCards.all().find((c) => c.hubId === hub.id && c.type === "category")?.id);
     case "add-payment":
       openAddPayment({ reason: "Add a payment method to activate your subscriptions." });
       return;
@@ -225,4 +245,5 @@ myHubsBody.addEventListener("click", (e) => {
 
 document.addEventListener("subscriptions-changed", renderMyHubs);
 document.addEventListener("payment-methods-changed", renderMyHubs);
+document.addEventListener("funds-changed", () => !myHubsPanel.hidden && renderMyHubs());
 renderMyHubs();

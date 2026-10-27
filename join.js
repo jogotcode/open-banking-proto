@@ -146,8 +146,14 @@ function escapeHtml(s) {
 function joinFooter(hub, sub) {
   if (sub) {
     const addPayment = sub.status === "pending-payment" ? `<button type="button" data-action="add-payment">Add payment method</button>` : "";
+    const canUseFunds = !fundsBlocker(hub);
+    const fundsBtn = !canUseFunds
+      ? ""
+      : hub.approval.type === "restricted"
+        ? `<button type="button" data-action="open-card">Use your card</button>`
+        : `<button type="button" data-action="request">Request funds</button>`;
     return `<button type="button" class="secondary" data-action="my-hubs">View my hubs</button>
-            ${addPayment || `<button type="button" data-action="close">Done</button>`}`;
+            ${addPayment || fundsBtn || `<button type="button" data-action="close">Done</button>`}`;
   }
   if (confirmingJoin) {
     const method = Auth.defaultPaymentMethod();
@@ -207,6 +213,7 @@ function renderJoinDialog(hub, distanceKm) {
       <h3>How transactions are approved</h3>
       <p><span class="chip">${escapeHtml(hub.approval.label)}</span></p>
       <p>${escapeHtml(hub.approvalText)}</p>
+      ${hub.approval.type === "restricted" ? "" : `<p class="muted">Approved funds arrive on a virtual card for this hub, valid for ${hub.cardDays} days.</p>`}
     </section>
 
     <section>
@@ -236,6 +243,11 @@ function renderJoinDialog(hub, distanceKm) {
         reason: `Choose how to pay ${formatMoney(hub.monthlyFee)}/month for ${hub.name}.`,
         onDone: () => renderJoinDialog(hub, distanceKm),
       });
+    }
+    if (action === "request") openRequest(hub);
+    if (action === "open-card") {
+      dialog.close();
+      openWallet();
     }
     if (action === "my-hubs") {
       dialog.close();

@@ -20,6 +20,7 @@
 
     <div class="chips">
       <button id="my-hubs-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="my-hubs">My hubs</button>
+      <button id="wallet-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="wallet">Wallet</button>
       <button id="filter-toggle" type="button" class="chip-btn" aria-expanded="false">Value: All ▾</button>
       <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate location</button>
       <span id="location-status" class="chip-btn static">Location off</span>
@@ -53,10 +54,22 @@
     <div id="my-hubs-body" class="panel-body"></div>
   </aside>
 
+  <aside id="wallet" class="side-panel" aria-label="Wallet" hidden>
+    <header class="panel-head">
+      <h2>Wallet</h2>
+      <button id="wallet-close" type="button" class="icon-btn" aria-label="Close">×</button>
+    </header>
+    <div id="wallet-body" class="panel-body"></div>
+  </aside>
+
   <div id="status" class="status" hidden></div>
 
   <dialog id="join-dialog" class="join-dialog" aria-label="Bubble details">
     <div id="join-body"></div>
+  </dialog>
+
+  <dialog id="request-dialog" class="join-dialog account-dialog" aria-label="Request funds">
+    <div id="request-body"></div>
   </dialog>
 
   <dialog id="account-dialog" class="join-dialog account-dialog" aria-label="Account">
@@ -68,8 +81,10 @@
   <script src="hubs.js"></script>
   <script src="auth.js"></script>
   <script src="join.js"></script>
+  <script src="funds.js"></script>
   <script src="app.js"></script>
   <script src="my-hubs.js"></script>
   <script src="account.js"></script>
+  <script src="wallet.js"></script>
 </body>
 </html>
