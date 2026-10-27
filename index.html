@@ -29,13 +29,25 @@
       <span id="count" class="count"></span>
       <button id="reset" type="button" class="secondary">Reset</button>
     </div>
+
+    <div class="location">
+      <button id="locate" type="button" class="secondary">📍 Use my location</button>
+      <button id="pick-location" type="button" class="secondary" title="Prototype: set your location by clicking the map">Pick on map</button>
+      <span id="location-status" class="count">Location off</span>
+    </div>
   </header>
 
   <div id="map"></div>
   <div id="status" class="status" hidden></div>
 
+  <dialog id="join-dialog" class="join-dialog" aria-label="Bubble details">
+    <div id="join-body"></div>
+  </dialog>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="cities.js"></script>
+  <script src="hubs.js"></script>
+  <script src="join.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,29 +1,4 @@
-// --- Data -------------------------------------------------------------------
-
-const MIN_VALUE = 10_000;
-const MAX_VALUE = 50_000_000;
-
-// Random value, skewed so most hubs are small and a few are large.
-function randomValue() {
-  const t = Math.pow(Math.random(), 2);
-  return Math.round(MIN_VALUE * Math.pow(MAX_VALUE / MIN_VALUE, t));
-}
-
-const hubs = CITIES.map(([name, country, lat, lng]) => ({
-  name,
-  country,
-  lat,
-  lng,
-  value: randomValue(),
-}));
-
 // --- Formatting & scales ----------------------------------------------------
-
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
 
 function formatShort(v) {
   if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
@@ -60,10 +35,24 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
   maxZoom: 19,
 }).addTo(map);
 
+// Coverage areas sit under the hub bubbles. They're real-world size, so they
+// only become visible once you zoom in toward a city.
+const coverageLayer = L.layerGroup().addTo(map);
 const bubbleLayer = L.layerGroup().addTo(map);
 
 for (const hub of hubs) {
   const color = colorFor(hub.value);
+
+  hub.coverage = L.circle([hub.lat, hub.lng], {
+    radius: hub.radiusKm * 1000,
+    color,
+    weight: 1,
+    opacity: 0.6,
+    dashArray: "6 6",
+    fillColor: color,
+    fillOpacity: 0.08,
+  });
+
   hub.marker = L.circleMarker([hub.lat, hub.lng], {
     radius: radiusFor(hub.value),
     color,
@@ -71,19 +60,135 @@ for (const hub of hubs) {
     opacity: 0.8,
     fillColor: color,
     fillOpacity: 0.3,
-  })
-    .bindPopup(
-      `<strong>${hub.name}</strong>, ${hub.country}` +
-        `<div class="popup-value">${currency.format(hub.value)}</div>`
-    )
-    .bindTooltip(formatShort(hub.value), {
-      permanent: true,
-      direction: "center",
-      className: "hub-label",
-    });
+  }).bindTooltip(formatShort(hub.value), {
+    permanent: true,
+    direction: "center",
+    className: "hub-label",
+  });
 
+  hub.marker.on("click", () => onHubTap(hub));
+  hub.coverage.on("click", () => onHubTap(hub));
   hub.marker.on("mouseover", () => hub.marker.setStyle({ fillOpacity: 0.55 }));
   hub.marker.on("mouseout", () => hub.marker.setStyle({ fillOpacity: 0.3 }));
+}
+
+function setHubVisible(hub, visible) {
+  for (const [layer, group] of [[hub.marker, bubbleLayer], [hub.coverage, coverageLayer]]) {
+    if (visible) group.addLayer(layer);
+    else group.removeLayer(layer);
+  }
+}
+
+// Reflects range + subscription state on a hub's bubble.
+function styleHub(hub) {
+  const joined = Subscriptions.get(hub.id);
+  const inRange = isInRange(hub);
+  hub.marker.setStyle({
+    color: joined ? "#ffffff" : colorFor(hub.value),
+    weight: joined ? 3 : inRange ? 2.5 : 1.5,
+  });
+  hub.marker.getElement()?.classList.toggle("hub-in-range", inRange);
+  hub.marker.setTooltipContent(`${joined ? "✓ " : ""}${formatShort(hub.value)}`);
+}
+
+// --- User location ----------------------------------------------------------
+
+let userLatLng = null;
+const userMarker = L.circleMarker([0, 0], {
+  radius: 7,
+  color: "#fff",
+  weight: 2,
+  fillColor: "#ff4d6d",
+  fillOpacity: 1,
+  interactive: false, // taps pass through to the bubble underneath
+}).bindTooltip("You", { permanent: true, direction: "top", offset: [0, -6] });
+
+const locationStatus = document.getElementById("location-status");
+const pickBtn = document.getElementById("pick-location");
+let picking = false;
+
+function distanceKm(hub) {
+  return userLatLng ? map.distance(userLatLng, [hub.lat, hub.lng]) / 1000 : Infinity;
+}
+
+function isInRange(hub) {
+  return distanceKm(hub) <= hub.radiusKm;
+}
+
+function setUserLocation(latlng, { fly = true } = {}) {
+  userLatLng = L.latLng(latlng);
+  userMarker.setLatLng(userLatLng).addTo(map);
+  hubs.forEach(styleHub);
+
+  const nearby = hubs.filter(isInRange);
+  locationStatus.textContent = nearby.length
+    ? `In range of ${nearby.length} bubble${nearby.length > 1 ? "s" : ""}`
+    : "No bubbles in range";
+
+  if (fly) {
+    const target = nearby[0];
+    if (target) map.flyToBounds(target.coverage.getBounds(), { maxZoom: 11 });
+    else map.flyTo(userLatLng, 8);
+  }
+}
+
+function locateUser() {
+  if (!navigator.geolocation) {
+    showStatus("Location isn't available in this browser — use “Pick on map”");
+    return;
+  }
+  locationStatus.textContent = "Locating…";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+    () => {
+      locationStatus.textContent = "Location off";
+      showStatus("Couldn't get your location — use “Pick on map” to set one");
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function setPicking(on) {
+  picking = on;
+  pickBtn.classList.toggle("active", on);
+  map.getContainer().classList.toggle("picking", on);
+  if (on) showStatus("Click anywhere on the map to set your location");
+}
+
+document.getElementById("locate").addEventListener("click", locateUser);
+pickBtn.addEventListener("click", () => setPicking(!picking));
+
+map.on("click", (e) => {
+  if (!picking) return;
+  setPicking(false);
+  setUserLocation(e.latlng, { fly: false });
+});
+
+// --- Tapping a hub ----------------------------------------------------------
+
+function onHubTap(hub) {
+  // While picking, the click bubbles up to the map handler, which sets the location.
+  if (picking) return;
+
+  if (isInRange(hub)) {
+    openJoinDialog(hub, distanceKm(hub), styleHub);
+    return;
+  }
+
+  const content = document.createElement("div");
+  content.className = "range-popup";
+  const where = `<strong>${hub.name}</strong> · ${hub.purpose.title}<div class="popup-value">${formatMoney(hub.value)}</div>`;
+  if (userLatLng) {
+    const away = distanceKm(hub) - hub.radiusKm;
+    content.innerHTML = `${where}<p>You're ${Math.round(away).toLocaleString()} km outside this bubble. Get within ${hub.radiusKm} km of ${hub.name} to view details and join.</p>`;
+  } else {
+    content.innerHTML = `${where}<p>Share your location to see if you can join this bubble.</p><button type="button">Use my location</button>`;
+    content.querySelector("button").addEventListener("click", () => {
+      map.closePopup();
+      locateUser();
+    });
+  }
+  L.popup({ maxWidth: 260 }).setLatLng([hub.lat, hub.lng]).setContent(content).openOn(map);
 }
 
 // --- Value filter -----------------------------------------------------------
@@ -109,11 +214,10 @@ function applyFilter() {
   let shown = 0;
   for (const hub of hubs) {
     const visible = hub.value >= lo && hub.value <= hi;
+    setHubVisible(hub, visible);
     if (visible) {
-      bubbleLayer.addLayer(hub.marker);
+      styleHub(hub); // path element is recreated when re-added
       shown++;
-    } else {
-      bubbleLayer.removeLayer(hub.marker);
     }
   }
   countEl.textContent = `${shown} of ${hubs.length} hubs shown`;
@@ -181,10 +285,7 @@ function goToHub(hub) {
   if (!bubbleLayer.hasLayer(hub.marker)) {
     showStatus(`${hub.name}'s hub is hidden by the value filter`);
   }
-  map.flyTo([hub.lat, hub.lng], 9);
-  map.once("moveend", () => {
-    if (bubbleLayer.hasLayer(hub.marker)) hub.marker.openPopup();
-  });
+  map.flyToBounds(hub.coverage.getBounds(), { maxZoom: 11 });
 }
 
 // Cities without a hub fall back to OpenStreetMap geocoding.
