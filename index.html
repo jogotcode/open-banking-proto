@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financial Hub Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <form id="search-form" class="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Search a city (e.g. London, Tokyo, Chicago)" aria-label="Search a city" />
+      <button type="submit">Search</button>
+      <ul id="suggestions" class="suggestions" hidden></ul>
+    </form>
+
+    <div class="filter">
+      <label>
+        Min value
+        <input id="min-value" type="range" min="0" max="100" value="0" />
+        <output id="min-label">$0</output>
+      </label>
+      <label>
+        Max value
+        <input id="max-value" type="range" min="0" max="100" value="100" />
+        <output id="max-label">$0</output>
+      </label>
+      <span id="count" class="count"></span>
+      <button id="reset" type="button" class="secondary">Reset</button>
+    </div>
+  </header>
+
+  <div id="map"></div>
+  <div id="status" class="status" hidden></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="cities.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
