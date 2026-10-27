@@ -17,6 +17,8 @@ Prototype of a financial hub map with a Google-Maps-style interface, built on re
 - **Requesting funds**: once their first month is done, members standing inside a hub's bubble can request an amount (up to the hub's cap) and say what it's for. First-come-first-served hubs approve instantly; committee and member-vote hubs review it (simulated in a few seconds for the demo). One request per hub can be in review at a time.
 - **Virtual cards**: an approved request is loaded onto a virtual card for that hub, valid for the number of days the hub's creator set (7, 14 or 30). **Restricted hubs** (food, shoes and clothing, medical, …) instead give members a category card they can just use, with a per-purchase limit and monthly allowance set by the hub.
 - **Wallet** (chip next to My hubs): every card with what's left, its rules and recent transactions, **Show details** for the number/CVC, and **Simulate a purchase** at demo stores to see approvals and declines (wrong category, over the per-purchase limit, over the balance, expired).
+- **Start a hub** (chip, or "Start a hub here" on a searched place): a 5-step form covering name and purpose, area (your location, the map center or the searched place, plus a radius), money rules (fee, approval style, request cap and card length, or a spending card's limits), startup rules (minimum members and a deadline), then review.
+- **Startup period**: a new hub is *forming* (gray dashed bubble, "Forming · 3/10"). Joining is free for founding members and no one can request funds. It **launches** the moment it reaches its minimum members, and billing starts for everyone then. Requests open only after its **first valid month**. If the deadline passes first, the hub closes and nobody is ever charged. A **timeline with live countdowns** (deadline, then requests opening) shows in the hub's pop-up and in My hubs. Creators get demo controls to simulate neighbors joining and to skip ahead 7 days.
 - **Simulate location** (prototype helper): click the map to pretend you're somewhere else.
 - Hub details are randomly generated but seeded by city name, so they stay the same across reloads.
 
@@ -31,11 +33,13 @@ python3 -m http.server 8000
 
 Browsers only allow location on `localhost` or HTTPS, so host it on HTTPS when testing on a phone.
 
-Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, basemaps, location, search, filter), `my-hubs.js` (My hubs panel), `auth.js` (accounts, sessions, saved payment methods), `account.js` (sign up / log in / account / payment dialog), `funds.js` (requests, virtual cards, spending rules), `wallet.js` (request dialog + Wallet panel).
+Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, basemaps, location, search, filter), `my-hubs.js` (My hubs panel), `auth.js` (accounts, sessions, saved payment methods), `account.js` (sign up / log in / account / payment dialog), `funds.js` (requests, virtual cards, spending rules), `wallet.js` (request dialog + Wallet panel), `startup.js` (user-created hubs, startup lifecycle, timeline), `create-hub.js` (Start a hub form).
 
 ## Notes for production
 
 **Accounts and payments are a front-end prototype.** Accounts are stored in the browser (passwords hashed with PBKDF2), cards are test-mode only and Apple Pay is simulated. Going live needs a backend for accounts and sessions, and a payment processor such as Stripe for cards and Apple Pay (merchant ID + domain verification). The processor plugs in at `finishPayment()` in `account.js`.
+
+**User-created hubs are stored in this browser**, so other people can't see or join them yet; that needs a backend. The demo controls stand in for real neighbors and the passage of time.
 
 **Virtual cards are simulated.** Card numbers are generated demo numbers, purchases are simulated and votes are simulated. A live version would issue cards through a card-issuing platform (e.g. Stripe Issuing or Marqeta), whose spending controls (merchant categories, per-purchase limits, expiry) enforce the same rules; that replaces `newCard()` and `simulatePurchase()` in `funds.js`.
 

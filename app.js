@@ -13,7 +13,7 @@ function sliderToValue(pos) {
 }
 
 function radiusFor(value) {
-  const t = Math.sqrt((value - MIN_VALUE) / (MAX_VALUE - MIN_VALUE));
+  const t = Math.sqrt(Math.max(0, value - MIN_VALUE) / (MAX_VALUE - MIN_VALUE));
   return 10 + t * 40;
 }
 
@@ -158,7 +158,7 @@ setBasemap(BASEMAPS[savedBasemap] ? savedBasemap : "map");
 const coverageLayer = L.layerGroup().addTo(map);
 const bubbleLayer = L.layerGroup().addTo(map);
 
-for (const hub of hubs) {
+function addHubToMap(hub) {
   const color = colorFor(hub.value);
 
   hub.coverage = L.circle([hub.lat, hub.lng], {
@@ -190,6 +190,8 @@ for (const hub of hubs) {
   hub.marker.on("mouseout", () => hub.marker.setStyle({ fillOpacity: 0.3 }));
 }
 
+hubs.forEach(addHubToMap);
+
 function setHubVisible(hub, visible) {
   for (const [layer, group] of [[hub.marker, bubbleLayer], [hub.coverage, coverageLayer]]) {
     if (visible) group.addLayer(layer);
@@ -198,19 +200,29 @@ function setHubVisible(hub, visible) {
 }
 
 // Reflects range + subscription state on a hub's bubble.
+const FORMING_COLOR = "#80868b";
+
 function styleHub(hub) {
   const joined = Subscriptions.get(hub.id);
   const inRange = isInRange(hub);
+  const forming = hubPhase(hub) === "forming";
+  const color = forming ? FORMING_COLOR : colorFor(hub.value);
   hub.marker.setStyle({
-    color: joined ? (BASEMAPS[activeBasemap].dark ? "#ffffff" : "#202124") : colorFor(hub.value),
+    color: joined ? (BASEMAPS[activeBasemap].dark ? "#ffffff" : "#202124") : color,
+    fillColor: color,
     weight: joined ? 3 : inRange ? 2.5 : 1.5,
+    dashArray: forming ? "5 4" : null, // not live yet
+    radius: radiusFor(hub.value),
   });
+  hub.coverage.setStyle({ color, fillColor: color });
   hub.marker.getElement()?.classList.toggle("hub-in-range", inRange);
-  hub.marker.setTooltipContent(`${joined ? "✓ " : ""}${formatShort(hub.value)}`);
+  const label = forming ? `Forming · ${hub.members}/${hub.minMembers}` : formatShort(hub.value);
+  hub.marker.setTooltipContent(`${joined ? "✓ " : ""}${label}`);
 }
 
 hubsReady = true;
 document.addEventListener("subscriptions-changed", () => hubs.forEach(styleHub));
+document.addEventListener("hubs-changed", () => applyFilter()); // launches, closures, new members
 
 function hubsCovering(latlng) {
   return hubs.filter((h) => map.distance(latlng, [h.lat, h.lng]) <= h.radiusKm * 1000);
@@ -449,7 +461,9 @@ function applyFilter() {
 
   let shown = 0;
   for (const hub of hubs) {
-    const visible = hub.value >= lo && hub.value <= hi;
+    // Closed hubs leave the map; new hubs' small pools count as the minimum.
+    const value = Math.max(hub.value, MIN_VALUE);
+    const visible = hubPhase(hub) !== "failed" && value >= lo && value <= hi;
     setHubVisible(hub, visible);
     if (visible) {
       styleHub(hub); // path element is recreated when re-added
@@ -601,7 +615,7 @@ function goToPlace(place) {
   const covering = hubsCovering(latlng);
   const bubbleNote = covering.length
     ? `Inside the <strong>${covering.map((h) => escapeHtml(h.name)).join(", ")}</strong> bubble${covering.length > 1 ? "s" : ""}`
-    : "No bubble covers this place yet";
+    : `No bubble covers this place yet. <button type="button" class="link-btn" data-start-hub="${place.lat},${place.lng}">Start a hub here</button>`;
   const fromYou = userLatLng ? ` · ${formatDistance(map.distance(userLatLng, latlng) / 1000)} from you` : "";
 
   placePin?.remove();

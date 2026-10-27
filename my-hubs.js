@@ -24,6 +24,12 @@ function encouragement(hub, sub, info) {
   if (sub.status === "pending-review") {
     return `Fingers crossed! Once ${hub.name}'s members approve you, your ${fee} a month will help ${hub.impact}.`;
   }
+  if (sub.status === "founding") {
+    return `You're one of ${hub.members} founding members. Once ${hub.minMembers} neighbors join, your ${fee} a month will help ${hub.impact}. Invite people nearby!`;
+  }
+  if (sub.status === "not-launched") {
+    return `${hub.name} didn't reach ${hub.minMembers} members in time, so it closed. You were never charged. Thanks for trying to get it started.`;
+  }
   if (sub.status === "pending-payment") {
     return `Add a payment method and your ${fee} a month will help ${hub.impact}.`;
   }
@@ -40,6 +46,8 @@ function badgeFor(sub) {
   if (sub.status === "pending-review") return `<span class="badge warn">Awaiting approval</span>`;
   if (sub.status === "cancelling") return `<span class="badge muted">Ends ${formatDate(sub.endsAt)}</span>`;
   if (sub.status === "pending-payment") return `<span class="badge warn">Payment needed</span>`;
+  if (sub.status === "founding") return `<span class="badge info">Founding member</span>`;
+  if (sub.status === "not-launched") return `<span class="badge muted">Didn't launch</span>`;
   return `<span class="badge ok">Active</span>`;
 }
 
@@ -50,6 +58,8 @@ function paidWith(sub) {
 }
 
 function commitmentBlock(hub, sub, info) {
+  if (sub.status === "founding") return startupTimeline(hub);
+  if (sub.status === "not-launched") return "";
   if (sub.status === "pending-review") {
     return `<p class="commit-note">Your one-month commitment starts once you're approved.</p>`;
   }
@@ -99,7 +109,9 @@ function cancelBlock(hub, sub, info) {
   if (confirmingCancel === hub.id) {
     const message = isRequest
       ? `Withdraw your request to join ${hub.name}?`
-      : !info.started
+      : sub.status === "founding"
+        ? `Leave ${hub.name}? You haven't been charged, and the hub will need another member to launch.`
+        : !info.started
         ? `Remove ${hub.name} from your hubs? You haven't been charged yet.`
         : info.unlocked
         ? `Cancel your ${formatMoney(sub.monthlyFee)}/month subscription to ${hub.name}? It ends right away.`
@@ -108,13 +120,17 @@ function cancelBlock(hub, sub, info) {
       <p>${escapeHtml(message)}</p>
       <div class="card-actions">
         <button type="button" class="secondary" data-action="keep" data-hub="${hub.id}">Keep it</button>
-        <button type="button" class="danger" data-action="confirm-cancel" data-hub="${hub.id}">${isRequest ? "Withdraw request" : "Yes, cancel"}</button>
+        <button type="button" class="danger" data-action="confirm-cancel" data-hub="${hub.id}">${
+          isRequest ? "Withdraw request" : sub.status === "founding" ? "Yes, leave" : sub.status === "not-launched" ? "Remove" : "Yes, cancel"
+        }</button>
       </div>
     </div>`;
   }
   return `<div class="card-actions">
-    <button type="button" class="secondary" data-action="show" data-hub="${hub.id}">Show on map</button>
-    <button type="button" class="secondary danger-text" data-action="cancel" data-hub="${hub.id}">${isRequest ? "Withdraw request" : "Cancel subscription"}</button>
+    ${sub.status === "not-launched" ? "" : `<button type="button" class="secondary" data-action="${hub.userCreated ? "open-hub" : "show"}" data-hub="${hub.id}">${hub.userCreated ? "Open hub" : "Show on map"}</button>`}
+    <button type="button" class="secondary danger-text" data-action="cancel" data-hub="${hub.id}">${
+      isRequest ? "Withdraw request" : sub.status === "founding" ? "Leave hub" : sub.status === "not-launched" ? "Remove" : "Cancel subscription"
+    }</button>
   </div>`;
 }
 
@@ -142,7 +158,8 @@ function renderMyHubs() {
     myHubsBody.innerHTML = `
       <div class="empty">
         <p><strong>You haven't joined any hubs yet.</strong></p>
-        <p>Walk into a bubble on the map and tap it to see how to join.</p>
+        <p>Walk into a bubble on the map and tap it to see how to join, or start one for your neighborhood.</p>
+        <p><button type="button" data-action="start-hub">+ Start a hub</button></p>
       </div>`;
     return;
   }
@@ -164,17 +181,18 @@ function renderMyHubs() {
         <article class="hub-card" style="--hub-color:${colorFor(hub.value)}">
           <header>
             <div>
-              <div class="dlg-eyebrow">${escapeHtml(hub.name)}, ${escapeHtml(hub.country)}</div>
+              <div class="dlg-eyebrow">${escapeHtml(hub.name)}, ${escapeHtml(hub.country)}${isCreator(hub) ? " · You created this hub" : ""}</div>
               <h3>${escapeHtml(hub.purpose.title)}</h3>
             </div>
             ${badgeFor(sub)}
           </header>
-          <div class="contribution">
+          ${sub.status === "not-launched" ? "" : `<div class="contribution">
             <span>Your contribution</span>
-            <strong>${formatMoney(sub.monthlyFee)}<small> / month</small></strong>
+            <strong>${formatMoney(sub.monthlyFee)}<small> / month${sub.status === "founding" ? " after launch" : ""}</small></strong>
+            ${sub.status === "founding" ? `<span class="total">Free while the hub is forming</span>` : ""}
             ${info.started ? `<span class="total">${formatMoney(info.contributed)} contributed so far</span>` : ""}
             ${paidWith(sub)}
-          </div>
+          </div>`}
           <p class="encourage">${escapeHtml(encouragement(hub, sub, info))}</p>
           ${commitmentBlock(hub, sub, info)}
           ${fundsAction(hub, sub, info)}
@@ -229,6 +247,12 @@ myHubsBody.addEventListener("click", (e) => {
     case "resume":
       Subscriptions.resume(hub.id);
       return;
+    case "open-hub":
+      if (window.matchMedia("(max-width: 640px)").matches) closeMyHubs();
+      map.flyToBounds(hub.coverage.getBounds(), { maxZoom: 13 });
+      return openJoinDialog(hub, distanceKm(hub));
+    case "start-hub":
+      return openCreateHub();
     case "request":
       return openRequest(hub);
     case "open-card":
@@ -246,4 +270,5 @@ myHubsBody.addEventListener("click", (e) => {
 document.addEventListener("subscriptions-changed", renderMyHubs);
 document.addEventListener("payment-methods-changed", renderMyHubs);
 document.addEventListener("funds-changed", () => !myHubsPanel.hidden && renderMyHubs());
+document.addEventListener("hubs-changed", () => !myHubsPanel.hidden && renderMyHubs());
 renderMyHubs();

@@ -77,6 +77,13 @@ const Subscriptions = {
     const sub = all[hubId];
     if (!sub) return;
     const info = subscriptionInfo(sub);
+    if (sub.status === "founding") {
+      // Leaving a hub that's still forming: free, and it loses a member.
+      delete all[hubId];
+      this._save(all);
+      changeMembers(hubs.find((h) => h.id === hubId), -1);
+      return;
+    }
     if (sub.status !== "active" || info.unlocked) {
       delete all[hubId];
     } else {
@@ -130,6 +137,8 @@ function statusText(sub) {
     "pending-payment": "Add a payment method to activate this subscription.",
     "pending-review": "Request sent — the bubble's members will review your application. You won't be charged until you're approved.",
     cancelling: "Subscription cancelled. You're still a member until your one-month commitment ends.",
+    founding: "You're a founding member! Nothing is charged while the hub is forming. If it launches, billing starts then; if it doesn't, it closes and you're never charged.",
+    "not-launched": "This hub didn't reach its minimum members in time, so it closed. You were never charged.",
   }[sub.status];
 }
 
@@ -164,8 +173,41 @@ function joinFooter(hub, sub) {
       <button type="button" class="secondary" data-action="back">Back</button>
       <button type="button" data-action="confirm-join">Confirm · ${formatMoney(hub.monthlyFee)}/mo</button>`;
   }
+  const phase = hubPhase(hub);
+  if (phase === "failed") return `<button type="button" data-action="close">Close</button>`;
+  const label =
+    phase === "forming"
+      ? "Join free as a founding member"
+      : hub.joinPolicy === "open"
+        ? `Subscribe · ${formatMoney(hub.monthlyFee)}/mo`
+        : "Request to join";
   return `<button type="button" class="secondary" data-action="close">Not now</button>
-          <button type="button" data-action="join">${hub.joinPolicy === "open" ? `Subscribe · ${formatMoney(hub.monthlyFee)}/mo` : "Request to join"}</button>`;
+          <button type="button" data-action="join">${label}</button>`;
+}
+
+// Startup status for hubs created by users: timeline + creator's demo tools.
+function startupSection(hub) {
+  if (!hub.userCreated) return "";
+  const phase = hubPhase(hub);
+  const intro = {
+    forming: `This hub is still forming. It needs ${hub.minMembers} founding members by ${formatDate(hub.record.deadlineAt)} to launch. Joining is free until then.`,
+    failed: "This hub didn't reach its minimum members in time and has closed. Nobody was charged.",
+    "first-month": "This hub has launched. Requests open once its first month is complete.",
+    open: "This hub is up and running.",
+  }[phase];
+  const demo = isCreator(hub) && phase !== "failed" && phase !== "open"
+    ? `<div class="demo-tools">
+        <span>Demo controls (you created this hub)</span>
+        ${phase === "forming" ? `<button type="button" class="secondary small" data-action="demo-member">+ Simulate a neighbor joining</button>` : ""}
+        <button type="button" class="secondary small" data-action="demo-skip">Skip ahead 7 days</button>
+      </div>`
+    : "";
+  return `<section class="startup">
+      <h3>Startup</h3>
+      <p>${escapeHtml(intro)}</p>
+      ${startupTimeline(hub)}
+      ${demo}
+    </section>`;
 }
 
 function renderJoinDialog(hub, distanceKm) {
@@ -185,7 +227,7 @@ function renderJoinDialog(hub, distanceKm) {
   dialogBody.innerHTML = `
     <header class="dlg-head" style="--hub-color:${colorFor(hub.value)}">
       <div>
-        <div class="dlg-eyebrow">${escapeHtml(hub.name)}, ${escapeHtml(hub.country)} · ${distanceKm.toFixed(1)} km away</div>
+        <div class="dlg-eyebrow">${escapeHtml(hub.name)}, ${escapeHtml(hub.country)}${Number.isFinite(distanceKm) ? ` · ${distanceKm.toFixed(1)} km away` : ""}</div>
         <h2 tabindex="-1" autofocus>${escapeHtml(hub.purpose.title)}</h2>
       </div>
       <button type="button" class="icon-btn" data-action="close" aria-label="Close">×</button>
@@ -197,6 +239,8 @@ function renderJoinDialog(hub, distanceKm) {
       <div><span>Since</span><strong>${hub.founded}</strong></div>
     </div>
 
+    ${startupSection(hub)}
+
     <section>
       <h3>Why this bubble was formed</h3>
       <p>${escapeHtml(hub.why)}</p>
@@ -204,7 +248,7 @@ function renderJoinDialog(hub, distanceKm) {
 
     <section>
       <h3>Subscription</h3>
-      <p class="fee"><strong>${formatMoney(hub.monthlyFee)}</strong> / month</p>
+      <p class="fee"><strong>${formatMoney(hub.monthlyFee)}</strong> / month${hubPhase(hub) === "forming" ? ` <span class="free-tag">Free until launch</span>` : ""}</p>
       <p class="commitment"><strong>One-month commitment.</strong> You need to stay subscribed for at least one month before you can make requests from the pool.</p>
       <p class="muted">Billed monthly to your card or Apple Pay.</p>
     </section>
@@ -245,6 +289,8 @@ function renderJoinDialog(hub, distanceKm) {
       });
     }
     if (action === "request") openRequest(hub);
+    if (action === "demo-member") changeMembers(hub, +1);
+    if (action === "demo-skip") skipAhead(hub, 7);
     if (action === "open-card") {
       dialog.close();
       openWallet();
@@ -264,6 +310,12 @@ function startJoin(hub) {
   }
   if (Subscriptions.get(hub.id)) {
     renderJoinDialog(hub, dialogDistance); // logging in revealed an existing membership
+    return;
+  }
+  const phase = hubPhase(hub);
+  if (phase === "failed") return;
+  if (phase === "forming") {
+    joinAsFounder(hub); // free until the hub launches
     return;
   }
   if (hub.joinPolicy !== "open") {
@@ -287,7 +339,7 @@ function openJoinDialog(hub, distanceKm) {
   if (!dialog.open) dialog.showModal();
 }
 
-for (const event of ["subscriptions-changed", "payment-methods-changed"]) {
+for (const event of ["subscriptions-changed", "payment-methods-changed", "hubs-changed"]) {
   document.addEventListener(event, () => {
     if (dialog.open && dialogHub) renderJoinDialog(dialogHub, dialogDistance);
   });

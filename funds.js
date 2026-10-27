@@ -70,8 +70,14 @@ function startOfMonth(d = new Date()) {
 // Why a member can't use a hub's funds right now (null if they can).
 function fundsBlocker(hub) {
   if (!Auth.user()) return "Log in to request funds.";
+  if (hubPhase(hub) === "forming") return `${hub.name} is still forming. Requests open one month after it launches.`;
+  if (hubPhase(hub) === "failed") return `${hub.name} didn't launch, so it has no funds.`;
   const sub = Subscriptions.get(hub.id);
   if (!sub || !["active", "cancelling"].includes(sub.status)) return `Join ${hub.name} to request funds.`;
+  const phase = hubPhase(hub);
+  if (phase === "first-month") {
+    return `Requests open on ${formatDate(firstMonthEnds(hub))}, after the hub's first valid month.`;
+  }
   const info = subscriptionInfo(sub);
   if (!info.unlocked) {
     return `You can request funds after your one-month commitment ends on ${formatDate(info.commitmentEnds)}.`;

@@ -344,7 +344,8 @@ button.secondary {
 
 #join-body,
 #account-body,
-#request-body { padding: 20px; }
+#request-body,
+#create-body { padding: 20px; }
 
 .dlg-head {
   display: flex;
@@ -930,6 +931,134 @@ button.full { width: 100%; margin-top: 8px; padding: 11px 16px; }
 
 details.past summary { margin: 12px 4px; color: var(--muted); font-size: 14px; cursor: pointer; }
 
+/* --- Startup + create a hub ---------------------------------------------------- */
+
+.create-chip { color: var(--accent); }
+.badge.info { background: var(--accent-soft); color: var(--accent); }
+
+.free-tag {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e6f4ea;
+  color: #137333;
+  font-size: 12px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.timeline {
+  position: relative;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.timeline li {
+  position: relative;
+  padding: 0 0 14px 28px;
+}
+
+/* connecting line */
+.timeline li::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 18px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline li:last-child { padding-bottom: 0; }
+.timeline li:last-child::after { display: none; }
+
+/* step dot */
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.timeline li.done::before { border-color: #137333; background: #137333; }
+.timeline li.done::after { background: #137333; }
+.timeline li.current::before { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.timeline li.failed::before { border-color: #d93025; background: #d93025; }
+.timeline li.todo { color: var(--muted); }
+.timeline strong { font-weight: 500; }
+.timeline li > div { margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.timeline li.current > div { color: var(--text); }
+.timeline li.failed > div { color: #a50e0e; }
+.timeline .progress { margin: 6px 0; }
+
+.countdown {
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.demo-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.demo-tools span { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.join-dialog .startup p { margin-bottom: 0; }
+
+.steps { display: flex; gap: 6px; margin: -4px 0 18px; }
+.steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); }
+.steps span.done,
+.steps span.current { background: var(--accent); }
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choice.disabled { opacity: 0.5; cursor: not-allowed; }
+.field .choice input { flex: none; width: 16px; height: 16px; margin: 3px 0 0; padding: 0; accent-color: var(--accent); }
+.choice span { display: flex; flex-direction: column; }
+.choice strong { font-weight: 500; font-size: 14px; }
+.choice small { color: var(--muted); font-size: 12px; }
+
+.field input[type="range"] { height: auto; padding: 0; border: none; accent-color: var(--accent); }
+.field-row.two { grid-template-columns: 1fr 1fr; }
+
+.hint-box {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: #174ea6;
+  font-size: 13px;
+}
+
+.review { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
+.review dt { color: var(--muted); }
+.review dd { margin: 0; }
+
 @media (max-width: 640px) {
   /* Account button shares the search row; chips wrap below, like Google Maps. */
   .topbar .searchbox { flex: 1 1 0; min-width: 0; }
@@ -940,7 +1069,7 @@ details.past summary { margin: 12px 4px; color: var(--muted); font-size: 14px; c
   .topbar .chips { order: 2; flex-basis: 100%; }
   .topbar .filter { order: 3; }
   .field-row { grid-template-columns: 1fr 1fr; }
-  .field-row .field:first-child { grid-column: 1 / -1; }
+  .field-row:not(.two) .field:first-child { grid-column: 1 / -1; }
   .side-panel {
     top: auto;
     bottom: 0;

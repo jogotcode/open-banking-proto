@@ -20,6 +20,7 @@
 
     <div class="chips">
       <button id="my-hubs-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="my-hubs">My hubs</button>
+      <button id="create-toggle" type="button" class="chip-btn create-chip">+ Start a hub</button>
       <button id="wallet-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="wallet">Wallet</button>
       <button id="filter-toggle" type="button" class="chip-btn" aria-expanded="false">Value: All ▾</button>
       <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate location</button>
@@ -68,6 +69,10 @@
     <div id="join-body"></div>
   </dialog>
 
+  <dialog id="create-dialog" class="join-dialog account-dialog" aria-label="Start a hub">
+    <div id="create-body"></div>
+  </dialog>
+
   <dialog id="request-dialog" class="join-dialog account-dialog" aria-label="Request funds">
     <div id="request-body"></div>
   </dialog>
@@ -82,9 +87,11 @@
   <script src="auth.js"></script>
   <script src="join.js"></script>
   <script src="funds.js"></script>
+  <script src="startup.js"></script>
   <script src="app.js"></script>
   <script src="my-hubs.js"></script>
   <script src="account.js"></script>
   <script src="wallet.js"></script>
+  <script src="create-hub.js"></script>
 </body>
 </html>
