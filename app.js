@@ -222,7 +222,13 @@ let watchId = null;
 let hasCentered = false;
 let inRangeIds = new Set();
 
-// Google-style blue dot with a translucent accuracy ring.
+// Google-style blue dot with a translucent accuracy ring, drawn above
+// bubbles and their labels.
+map.createPane("user");
+map.getPane("user").style.zIndex = 660;
+map.getPane("user").style.pointerEvents = "none";
+const userRenderer = L.svg({ pane: "user" });
+
 const accuracyCircle = L.circle([0, 0], {
   radius: 1,
   color: "#1a73e8",
@@ -231,6 +237,8 @@ const accuracyCircle = L.circle([0, 0], {
   fillColor: "#1a73e8",
   fillOpacity: 0.12,
   interactive: false,
+  pane: "user",
+  renderer: userRenderer,
 });
 const userMarker = L.circleMarker([0, 0], {
   radius: 8,
@@ -239,6 +247,8 @@ const userMarker = L.circleMarker([0, 0], {
   fillColor: "#1a73e8",
   fillOpacity: 1,
   interactive: false, // taps pass through to the bubble underneath
+  pane: "user",
+  renderer: userRenderer,
 });
 
 const locationStatus = document.getElementById("location-status");

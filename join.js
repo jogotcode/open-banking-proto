@@ -73,7 +73,7 @@ function renderJoinDialog(hub, distanceKm, onChange) {
     <header class="dlg-head" style="--hub-color:${colorFor(hub.value)}">
       <div>
         <div class="dlg-eyebrow">${escapeHtml(hub.name)}, ${escapeHtml(hub.country)} · ${distanceKm.toFixed(1)} km away</div>
-        <h2>${escapeHtml(hub.purpose.title)}</h2>
+        <h2 tabindex="-1" autofocus>${escapeHtml(hub.purpose.title)}</h2>
       </div>
       <button type="button" class="icon-btn" data-action="close" aria-label="Close">×</button>
     </header>
