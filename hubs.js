@@ -23,47 +23,56 @@ function seededRandom(seed) {
 
 const pick = (rand, list) => list[Math.floor(rand() * list.length)];
 
-// Why a bubble was formed. `category` is what restricted bubbles accept.
+// Why a bubble was formed. `category` is what restricted bubbles accept;
+// `impact` finishes the sentence "Your contribution helps …".
 const PURPOSES = [
   {
     title: "Community Grocery Co-op",
     why: "Neighbors in {city} pooled money to buy groceries in bulk and cover members through tight weeks.",
     category: "food and groceries",
+    impact: "keep groceries on the table for {city} families",
   },
   {
     title: "Street Vendor Relief Fund",
     why: "Formed by {city} street vendors to cover equipment repairs and slow seasons without high-interest loans.",
     category: "business equipment",
+    impact: "keep {city} street vendors in business",
   },
   {
     title: "Tenant Rent Circle",
     why: "Renters in {city} started this bubble to help members avoid late fees and eviction when rent comes up short.",
     category: "rent and utilities",
+    impact: "keep {city} neighbors safely in their homes",
   },
   {
     title: "Medical Bills Mutual Aid",
     why: "Created after several {city} members faced surprise medical bills; the pool helps with copays and prescriptions.",
     category: "medical expenses",
+    impact: "get {city} members the care they need",
   },
   {
     title: "Student Books & Tuition Pool",
     why: "Students and parents in {city} share the cost of textbooks, fees and school supplies.",
     category: "education",
+    impact: "put books in the hands of {city} students",
   },
   {
     title: "Childcare Cost Share",
     why: "Working parents in {city} formed this bubble to split daycare and babysitting costs.",
     category: "childcare",
+    impact: "give {city} parents peace of mind at work",
   },
   {
     title: "Local Artists Micro-Grants",
     why: "{city} creatives fund each other's materials, studio time and show fees.",
     category: "art supplies and studio time",
+    impact: "keep {city}'s creative scene alive",
   },
   {
     title: "Neighborhood Repair Fund",
     why: "Homeowners and tenants in {city} pool money for urgent home and car repairs.",
     category: "repairs",
+    impact: "get {city} homes and cars fixed fast",
   },
 ];
 
@@ -126,9 +135,9 @@ const hubs = CITIES.map(([name, country, lat, lng]) => {
     committeeSize: pick(rand, [3, 5, 7]),
     maxRequest: 50 * Math.round(2 + rand() * 38),
     joinPolicy: rand() < 0.65 ? "open" : "application",
-    minMonthsBeforeRequest: pick(rand, [0, 1, 2, 3]),
   };
   hub.why = hub.purpose.why.replace("{city}", name);
+  hub.impact = hub.purpose.impact.replace("{city}", name);
   hub.approvalText = hub.approval.describe(hub);
   return hub;
 });

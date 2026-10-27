@@ -19,6 +19,7 @@
     </form>
 
     <div class="chips">
+      <button id="my-hubs-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="my-hubs">My hubs</button>
       <button id="filter-toggle" type="button" class="chip-btn" aria-expanded="false">Value: All ▾</button>
       <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate location</button>
       <span id="location-status" class="chip-btn static">Location off</span>
@@ -42,6 +43,14 @@
     </div>
   </div>
 
+  <aside id="my-hubs" class="side-panel" aria-label="My hubs" hidden>
+    <header class="panel-head">
+      <h2>My hubs</h2>
+      <button id="my-hubs-close" type="button" class="icon-btn" aria-label="Close">×</button>
+    </header>
+    <div id="my-hubs-body" class="panel-body"></div>
+  </aside>
+
   <div id="status" class="status" hidden></div>
 
   <dialog id="join-dialog" class="join-dialog" aria-label="Bubble details">
@@ -53,5 +62,6 @@
   <script src="hubs.js"></script>
   <script src="join.js"></script>
   <script src="app.js"></script>
+  <script src="my-hubs.js"></script>
 </body>
 </html>

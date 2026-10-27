@@ -210,6 +210,7 @@ function styleHub(hub) {
 }
 
 hubsReady = true;
+document.addEventListener("subscriptions-changed", () => hubs.forEach(styleHub));
 
 function hubsCovering(latlng) {
   return hubs.filter((h) => map.distance(latlng, [h.lat, h.lng]) <= h.radiusKm * 1000);
@@ -289,9 +290,15 @@ function setUserLocation(latlng, { accuracy = 0 } = {}) {
   // Let the user know when they walk into a bubble.
   const entered = nearby.filter((h) => !inRangeIds.has(h.id));
   if (entered.length && hasCentered) {
-    showStatus(`You're inside the ${entered[0].name} bubble — tap it to see how to join`);
+    showStatus(insideMessage(entered[0]));
   }
   inRangeIds = new Set(nearby.map((h) => h.id));
+}
+
+function insideMessage(hub) {
+  return Subscriptions.get(hub.id)
+    ? `Welcome back to your ${hub.name} hub`
+    : `You're inside the ${hub.name} bubble — tap it to see how to join`;
 }
 
 function centerOnUser() {
@@ -319,7 +326,7 @@ function startTracking() {
         hasCentered = true;
         centerOnUser();
         const here = visibleInRange();
-        if (here.length) showStatus(`You're inside the ${here[0].name} bubble — tap it to see how to join`);
+        if (here.length) showStatus(insideMessage(here[0]));
       }
     },
     (err) => {
@@ -390,7 +397,7 @@ function onHubTap(hub) {
   if (picking) return;
 
   if (isInRange(hub)) {
-    openJoinDialog(hub, distanceKm(hub), styleHub);
+    openJoinDialog(hub, distanceKm(hub));
     return;
   }
 

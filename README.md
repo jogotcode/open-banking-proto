@@ -10,6 +10,8 @@ Prototype of a financial hub map with a Google-Maps-style interface, built on re
 - **Hub bubbles**: translucent circles with a (random, for now) monetary value; size and color scale with value. Each bubble covers a real area (dashed circle, visible when zoomed in).
 - **Value filter**: the "Value" chip opens min/max sliders that hide bubbles outside the range.
 - **Joining a bubble**: you must be inside its area. Tapping an in-range bubble opens a dialog with why it was formed, the monthly fee, how transactions are approved (committee, first come first served, restricted spending, member vote) and its rules. **Subscribe** (or **Request to join** for application-only bubbles) saves the subscription in the browser as pending until payment info is added on the account page (not built yet). Tapping an out-of-range bubble shows how far outside it you are.
+- **One-month commitment**: every subscription commits the member to at least one month before they can make requests from the pool. The join dialog says so up front.
+- **My hubs** (chip next to search): every hub the user has joined or asked to join, with their monthly contribution, total committed so far, an encouraging note about what their money does, a progress bar for the commitment month, and a **Cancel subscription** button (with confirmation). Cancelling during the first month keeps the membership until the month ends (with an option to keep it); after that it ends right away. Pending requests can be withdrawn.
 - **Simulate location** (prototype helper): click the map to pretend you're somewhere else.
 - Hub details are randomly generated but seeded by city name, so they stay the same across reloads.
 
@@ -24,7 +26,7 @@ python3 -m http.server 8000
 
 Browsers only allow location on `localhost` or HTTPS, so host it on HTTPS when testing on a phone.
 
-Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, basemaps, location, search, filter).
+Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, basemaps, location, search, filter), `my-hubs.js` (My hubs panel).
 
 ## Notes for production
 
