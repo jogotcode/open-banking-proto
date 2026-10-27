@@ -24,6 +24,9 @@ function encouragement(hub, sub, info) {
   if (sub.status === "pending-review") {
     return `Fingers crossed! Once ${hub.name}'s members approve you, your ${fee} a month will help ${hub.impact}.`;
   }
+  if (sub.status === "pending-payment") {
+    return `Add a payment method and your ${fee} a month will help ${hub.impact}.`;
+  }
   if (sub.status === "cancelling") {
     return `Thanks for being part of ${hub.name}. Your support helped ${hub.impact}. You're still a member until ${formatDate(sub.endsAt)}.`;
   }
@@ -36,12 +39,23 @@ function encouragement(hub, sub, info) {
 function badgeFor(sub) {
   if (sub.status === "pending-review") return `<span class="badge warn">Awaiting approval</span>`;
   if (sub.status === "cancelling") return `<span class="badge muted">Ends ${formatDate(sub.endsAt)}</span>`;
-  return `<span class="badge warn">Add payment method</span>`;
+  if (sub.status === "pending-payment") return `<span class="badge warn">Payment needed</span>`;
+  return `<span class="badge ok">Active</span>`;
+}
+
+function paidWith(sub) {
+  if (!sub.paymentMethodId || sub.status === "cancelling") return "";
+  const method = Auth.paymentMethods().find((m) => m.id === sub.paymentMethodId) || Auth.defaultPaymentMethod();
+  return method ? `<span class="paid-with">Paid with ${escapeHtml(paymentLabel(method))}</span>` : "";
 }
 
 function commitmentBlock(sub, info) {
   if (sub.status === "pending-review") {
     return `<p class="commit-note">Your one-month commitment starts once you're approved.</p>`;
+  }
+  if (sub.status === "pending-payment") {
+    return `<p class="commit-note">Your one-month commitment starts once you add a payment method.</p>
+      <div class="card-actions"><button type="button" data-action="add-payment">Add payment method</button></div>`;
   }
   if (sub.status === "cancelling") return "";
   if (info.unlocked) {
@@ -71,7 +85,9 @@ function cancelBlock(hub, sub, info) {
   if (confirmingCancel === hub.id) {
     const message = isRequest
       ? `Withdraw your request to join ${hub.name}?`
-      : info.unlocked
+      : !info.started
+        ? `Remove ${hub.name} from your hubs? You haven't been charged yet.`
+        : info.unlocked
         ? `Cancel your ${formatMoney(sub.monthlyFee)}/month subscription to ${hub.name}? It ends right away.`
         : `You committed to one month. If you cancel, you stay a member until ${formatDate(info.commitmentEnds)} and won't be billed after that.`;
     return `<div class="confirm">
@@ -94,9 +110,19 @@ function renderMyHubs() {
     .filter((e) => e.sub)
     .sort((a, b) => Date.parse(b.sub.joinedAt) - Date.parse(a.sub.joinedAt));
 
-  const paying = entries.filter((e) => e.sub.status !== "pending-review");
-  const monthly = paying.filter((e) => e.sub.status !== "cancelling").reduce((sum, e) => sum + e.sub.monthlyFee, 0);
+  const paying = entries.filter((e) => e.sub.status === "active");
+  const monthly = paying.reduce((sum, e) => sum + e.sub.monthlyFee, 0);
   myHubsToggle.textContent = entries.length ? `My hubs · ${entries.length}` : "My hubs";
+
+  if (!Auth.user()) {
+    myHubsBody.innerHTML = `
+      <div class="empty">
+        <p><strong>Log in to see your hubs.</strong></p>
+        <p>Your memberships and contributions are saved to your account.</p>
+        <p><button type="button" data-action="log-in">Log in or sign up</button></p>
+      </div>`;
+    return;
+  }
 
   if (!entries.length) {
     myHubsBody.innerHTML = `
@@ -132,7 +158,8 @@ function renderMyHubs() {
           <div class="contribution">
             <span>Your contribution</span>
             <strong>${formatMoney(sub.monthlyFee)}<small> / month</small></strong>
-            ${sub.status === "pending-review" ? "" : `<span class="total">${formatMoney(info.contributed)} committed so far</span>`}
+            ${info.started ? `<span class="total">${formatMoney(info.contributed)} contributed so far</span>` : ""}
+            ${paidWith(sub)}
           </div>
           <p class="encourage">${escapeHtml(encouragement(hub, sub, info))}</p>
           ${commitmentBlock(sub, info)}
@@ -186,9 +213,16 @@ myHubsBody.addEventListener("click", (e) => {
     case "resume":
       Subscriptions.resume(hub.id);
       return;
+    case "add-payment":
+      openAddPayment({ reason: "Add a payment method to activate your subscriptions." });
+      return;
+    case "log-in":
+      openAuth({ reason: "Log in to see your hubs." });
+      return;
   }
   renderMyHubs();
 });
 
 document.addEventListener("subscriptions-changed", renderMyHubs);
+document.addEventListener("payment-methods-changed", renderMyHubs);
 renderMyHubs();

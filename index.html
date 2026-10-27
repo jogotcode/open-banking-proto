@@ -25,6 +25,8 @@
       <span id="location-status" class="chip-btn static">Location off</span>
     </div>
 
+    <button id="account-btn" type="button" class="signin-btn">Sign in</button>
+
     <div id="filter-panel" class="card filter" hidden>
       <label>
         Min value
@@ -57,11 +59,17 @@
     <div id="join-body"></div>
   </dialog>
 
+  <dialog id="account-dialog" class="join-dialog account-dialog" aria-label="Account">
+    <div id="account-body"></div>
+  </dialog>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="cities.js"></script>
   <script src="hubs.js"></script>
+  <script src="auth.js"></script>
   <script src="join.js"></script>
   <script src="app.js"></script>
   <script src="my-hubs.js"></script>
+  <script src="account.js"></script>
 </body>
 </html>
