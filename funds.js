@@ -122,8 +122,11 @@ function decide(request, hub) {
   if (hub.approval.type === "committee") {
     const yes = Math.ceil(hub.committeeSize / 2) + Math.floor(Math.random() * (hub.committeeSize / 2));
     request.votes = `${yes} of ${hub.committeeSize} committee members approved`;
+  } else if (hub.approval.type === "organizer") {
+    request.votes = `Approved by ${hub.record.organizerName}`;
   } else if (hub.approval.type === "member-vote") {
-    const cast = Math.max(5, Math.round(hub.members * (0.15 + Math.random() * 0.2)));
+    // Groups are small enough that everyone votes.
+    const cast = hub.isGroup ? hub.members : Math.max(5, Math.round(hub.members * (0.15 + Math.random() * 0.2)));
     const yes = Math.ceil(cast * (0.55 + Math.random() * 0.35));
     request.votes = `${yes} of ${cast} votes in favor`;
   } else {

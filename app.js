@@ -190,9 +190,13 @@ function addHubToMap(hub) {
   hub.marker.on("mouseout", () => hub.marker.setStyle({ fillOpacity: 0.3 }));
 }
 
-hubs.forEach(addHubToMap);
+// Friend groups live in `hubs` too (for memberships and cards) but aren't places.
+const onMap = (hub) => !hub.isGroup;
+
+hubs.filter(onMap).forEach(addHubToMap);
 
 function setHubVisible(hub, visible) {
+  if (!onMap(hub)) return;
   for (const [layer, group] of [[hub.marker, bubbleLayer], [hub.coverage, coverageLayer]]) {
     if (visible) group.addLayer(layer);
     else group.removeLayer(layer);
@@ -203,6 +207,7 @@ function setHubVisible(hub, visible) {
 const FORMING_COLOR = "#80868b";
 
 function styleHub(hub) {
+  if (!onMap(hub)) return;
   const joined = Subscriptions.get(hub.id);
   const inRange = isInRange(hub);
   const forming = hubPhase(hub) === "forming";
@@ -225,7 +230,7 @@ document.addEventListener("subscriptions-changed", () => hubs.forEach(styleHub))
 document.addEventListener("hubs-changed", () => applyFilter()); // launches, closures, new members
 
 function hubsCovering(latlng) {
-  return hubs.filter((h) => map.distance(latlng, [h.lat, h.lng]) <= h.radiusKm * 1000);
+  return hubs.filter((h) => onMap(h) && map.distance(latlng, [h.lat, h.lng]) <= h.radiusKm * 1000);
 }
 
 // --- User location ----------------------------------------------------------
@@ -273,12 +278,13 @@ function distanceKm(hub) {
 }
 
 function isInRange(hub) {
+  if (!onMap(hub)) return true; // groups aren't tied to a place
   return distanceKm(hub) <= hub.radiusKm;
 }
 
 // Bubbles you're inside that aren't hidden by the value filter.
 function visibleInRange() {
-  return hubs.filter((h) => bubbleLayer.hasLayer(h.marker) && isInRange(h));
+  return hubs.filter((h) => onMap(h) && bubbleLayer.hasLayer(h.marker) && isInRange(h));
 }
 
 function updateLocationStatus() {
@@ -460,7 +466,8 @@ function applyFilter() {
   filterToggle.textContent = filtered ? `Value: ${formatShort(lo)} – ${formatShort(hi)} ▾` : "Value: All ▾";
 
   let shown = 0;
-  for (const hub of hubs) {
+  const mapHubs = hubs.filter(onMap);
+  for (const hub of mapHubs) {
     // Closed hubs leave the map; new hubs' small pools count as the minimum.
     const value = Math.max(hub.value, MIN_VALUE);
     const visible = hubPhase(hub) !== "failed" && value >= lo && value <= hi;
@@ -470,7 +477,7 @@ function applyFilter() {
       shown++;
     }
   }
-  countEl.textContent = `${shown} of ${hubs.length} hubs shown`;
+  countEl.textContent = `${shown} of ${mapHubs.length} hubs shown`;
   updateLocationStatus();
 }
 
@@ -508,7 +515,7 @@ function matchHubs(query) {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   return hubs
-    .filter((h) => h.name.toLowerCase().includes(q) || h.country.toLowerCase().includes(q))
+    .filter((h) => onMap(h) && (h.name.toLowerCase().includes(q) || h.country.toLowerCase().includes(q)))
     .sort((a, b) => a.name.toLowerCase().indexOf(q) - b.name.toLowerCase().indexOf(q))
     .slice(0, 4);
 }

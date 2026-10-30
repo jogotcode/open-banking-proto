@@ -345,7 +345,8 @@ button.secondary {
 #join-body,
 #account-body,
 #request-body,
-#create-body { padding: 20px; }
+#create-body,
+#group-body { padding: 20px; }
 
 .dlg-head {
   display: flex;
@@ -1058,6 +1059,117 @@ details.past summary { margin: 12px 4px; color: var(--muted); font-size: 14px; c
 .review { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
 .review dt { color: var(--muted); }
 .review dd { margin: 0; }
+
+/* --- Friends + groups -------------------------------------------------------- */
+
+.code-card {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.code-card span,
+.code-card small { opacity: 0.9; font-size: 13px; }
+.code-card .countdown { color: #fff; }
+.code-card button { margin-top: 4px; background: #fff; border-color: #fff; }
+
+.friend-code {
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  user-select: all;
+}
+
+.add-friend { margin-top: 16px; }
+.add-friend .field { margin-bottom: 6px; }
+.code-row { display: flex; gap: 8px; }
+
+.code-row input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  font-size: 17px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.code-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.add-msg { margin: 6px 0 0; font-size: 14px; }
+.add-msg.ok { color: #137333; }
+.add-msg.err { color: #d93025; }
+.panel-body .demo-tools { margin-top: 14px; background: var(--surface); }
+
+.invite-card {
+  display: grid;
+  gap: 2px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+}
+
+.invite-card span { font-size: 13px; color: var(--muted); }
+.invite-card .card-actions { margin-top: 10px; flex-wrap: wrap; }
+
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+}
+
+.group-row span:nth-child(2) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.group-row small { color: var(--muted); font-size: 12px; }
+.group-row strong { font-weight: 500; }
+.chev { color: var(--muted); font-size: 22px; }
+
+.group-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--hub-color);
+  color: #fff;
+  font-weight: 600;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--surface-2);
+}
+
+.friend-row:last-child { border-bottom: none; }
+.friend-row .avatar { width: 36px; height: 36px; font-size: 15px; border: none; }
+.friend-row span:nth-child(2) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.friend-row strong { font-weight: 500; }
+.friend-row small { color: var(--muted); font-size: 12px; }
+.panel-body .friend-row { padding: 10px 12px; margin-bottom: 6px; border: none; border-radius: 12px; background: var(--surface); }
+.muted-row { opacity: 0.6; }
 
 @media (max-width: 640px) {
   /* Account button shares the search row; chips wrap below, like Google Maps. */

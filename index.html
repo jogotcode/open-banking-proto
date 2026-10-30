@@ -22,6 +22,7 @@
       <button id="my-hubs-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="my-hubs">My hubs</button>
       <button id="create-toggle" type="button" class="chip-btn create-chip">+ Start a hub</button>
       <button id="wallet-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="wallet">Wallet</button>
+      <button id="friends-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="friends">Friends</button>
       <button id="filter-toggle" type="button" class="chip-btn" aria-expanded="false">Value: All ▾</button>
       <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate location</button>
       <span id="location-status" class="chip-btn static">Location off</span>
@@ -63,6 +64,14 @@
     <div id="wallet-body" class="panel-body"></div>
   </aside>
 
+  <aside id="friends" class="side-panel" aria-label="Friends" hidden>
+    <header class="panel-head">
+      <h2>Friends</h2>
+      <button id="friends-close" type="button" class="icon-btn" aria-label="Close">×</button>
+    </header>
+    <div id="friends-body" class="panel-body"></div>
+  </aside>
+
   <div id="status" class="status" hidden></div>
 
   <dialog id="join-dialog" class="join-dialog" aria-label="Bubble details">
@@ -77,6 +86,10 @@
     <div id="request-body"></div>
   </dialog>
 
+  <dialog id="group-dialog" class="join-dialog account-dialog" aria-label="Friends group">
+    <div id="group-body"></div>
+  </dialog>
+
   <dialog id="account-dialog" class="join-dialog account-dialog" aria-label="Account">
     <div id="account-body"></div>
   </dialog>
@@ -88,10 +101,12 @@
   <script src="join.js"></script>
   <script src="funds.js"></script>
   <script src="startup.js"></script>
+  <script src="groups.js"></script>
   <script src="app.js"></script>
   <script src="my-hubs.js"></script>
   <script src="account.js"></script>
   <script src="wallet.js"></script>
   <script src="create-hub.js"></script>
+  <script src="friends.js"></script>
 </body>
 </html>

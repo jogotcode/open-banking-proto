@@ -35,7 +35,10 @@ const Subscriptions = {
       this._memory = this._key() ? readJson(this._key(), {}) : {};
       // Drop cancelled subscriptions whose final month has ended.
       for (const [id, sub] of Object.entries(this._memory)) {
-        if (sub.status === "cancelling" && Date.now() >= Date.parse(sub.endsAt)) delete this._memory[id];
+        if (sub.status === "cancelling" && Date.now() >= Date.parse(sub.endsAt)) {
+          delete this._memory[id];
+          setTimeout(() => document.dispatchEvent(new CustomEvent("membership-ended", { detail: id })));
+        }
       }
     }
     return this._memory;
@@ -86,6 +89,7 @@ const Subscriptions = {
     }
     if (sub.status !== "active" || info.unlocked) {
       delete all[hubId];
+      document.dispatchEvent(new CustomEvent("membership-ended", { detail: hubId }));
     } else {
       sub.status = "cancelling";
       sub.endsAt = info.commitmentEnds.toISOString();

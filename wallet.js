@@ -16,6 +16,7 @@ const HOW_DECIDED = {
   fcfs: "Approved right away while this month's pool lasts.",
   committee: (hub) => `Reviewed by the hub's elected committee of ${hub.committeeSize}.`,
   "member-vote": () => "Every member gets 48 hours to vote.",
+  organizer: (hub) => `${hub.record.organizerName}, the group's organizer, reviews it.`,
 };
 
 function howDecided(hub) {
@@ -26,7 +27,7 @@ function howDecided(hub) {
 function fundRuleText(hub) {
   return hub.approval.type === "restricted"
     ? `Members use a ${hub.purpose.category} card: up to ${formatMoney(hub.perPurchaseLimit)} per purchase, ${formatMoney(hub.monthlyAllowance)} a month.`
-    : `Approved funds arrive on a virtual card for this hub, valid for ${hub.cardDays} days. Anything unused goes back to the pool.`;
+    : `Approved funds arrive on a virtual card for this ${hub.isGroup ? "group" : "hub"}, valid for ${hub.cardDays} days. Anything unused goes back to the pool.`;
 }
 
 // --- Request dialog -----------------------------------------------------------
@@ -130,8 +131,8 @@ requestBody.addEventListener("click", (e) => {
   if (!btn) return;
   if (btn.dataset.action === "close") requestDialog.close();
   if (btn.dataset.action === "wallet") {
-    requestDialog.close();
-    if (dialog.open) dialog.close();
+    // Close whatever the request came from (hub or group pop-up) so the Wallet is usable.
+    document.querySelectorAll("dialog[open]").forEach((d) => d.close());
     openWallet(btn.dataset.card);
   }
 });
@@ -262,6 +263,7 @@ function renderWallet() {
 function openWallet(focusCardId) {
   if (!filterPanel.hidden) filterToggle.click();
   closeMyHubs();
+  if (typeof closeFriends === "function") closeFriends();
   renderWallet();
   walletPanel.hidden = false;
   walletToggle.classList.add("active");

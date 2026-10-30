@@ -127,7 +127,7 @@ function cancelBlock(hub, sub, info) {
     </div>`;
   }
   return `<div class="card-actions">
-    ${sub.status === "not-launched" ? "" : `<button type="button" class="secondary" data-action="${hub.userCreated ? "open-hub" : "show"}" data-hub="${hub.id}">${hub.userCreated ? "Open hub" : "Show on map"}</button>`}
+    ${sub.status === "not-launched" ? "" : `<button type="button" class="secondary" data-action="${hub.isGroup ? "open-group" : hub.userCreated ? "open-hub" : "show"}" data-hub="${hub.id}">${hub.isGroup ? "Open group" : hub.userCreated ? "Open hub" : "Show on map"}</button>`}
     <button type="button" class="secondary danger-text" data-action="cancel" data-hub="${hub.id}">${
       isRequest ? "Withdraw request" : sub.status === "founding" ? "Leave hub" : sub.status === "not-launched" ? "Remove" : "Cancel subscription"
     }</button>
@@ -205,6 +205,7 @@ function renderMyHubs() {
 function openMyHubs(focusHubId) {
   if (!filterPanel.hidden) filterToggle.click(); // panels open in the same spot
   if (typeof closeWallet === "function") closeWallet();
+  if (typeof closeFriends === "function") closeFriends();
   renderMyHubs();
   myHubsPanel.hidden = false;
   myHubsToggle.classList.add("active");
@@ -251,6 +252,8 @@ myHubsBody.addEventListener("click", (e) => {
       if (window.matchMedia("(max-width: 640px)").matches) closeMyHubs();
       map.flyToBounds(hub.coverage.getBounds(), { maxZoom: 13 });
       return openJoinDialog(hub, distanceKm(hub));
+    case "open-group":
+      return openGroup(hub);
     case "start-hub":
       return openCreateHub();
     case "request":
