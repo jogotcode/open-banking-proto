@@ -18,10 +18,11 @@ function radiusFor(value) {
 }
 
 function colorFor(value) {
-  if (value >= 10_000_000) return "#0f9d58";
-  if (value >= 1_000_000) return "#1a73e8";
-  if (value >= 100_000) return "#8e44ef";
-  return "#f29900";
+  // Bright enough to read on the dark map.
+  if (value >= 10_000_000) return "#34c77b";
+  if (value >= 1_000_000) return "#5b9bff";
+  if (value >= 100_000) return "#a77bff";
+  return "#f5a524";
 }
 
 function formatDistance(km) {
@@ -149,7 +150,7 @@ let savedBasemap = null;
 try {
   savedBasemap = localStorage.getItem("basemap");
 } catch {}
-setBasemap(BASEMAPS[savedBasemap] ? savedBasemap : "map");
+setBasemap(BASEMAPS[savedBasemap] ? savedBasemap : "dark"); // dark map matches the dark theme
 
 // --- Hubs -------------------------------------------------------------------
 
@@ -204,7 +205,7 @@ function setHubVisible(hub, visible) {
 }
 
 // Reflects range + subscription state on a hub's bubble.
-const FORMING_COLOR = "#80868b";
+const FORMING_COLOR = "#8b95a5";
 
 function styleHub(hub) {
   if (!onMap(hub)) return;
@@ -249,10 +250,10 @@ const userRenderer = L.svg({ pane: "user" });
 
 const accuracyCircle = L.circle([0, 0], {
   radius: 1,
-  color: "#1a73e8",
+  color: "#4c8dff",
   weight: 1,
   opacity: 0.4,
-  fillColor: "#1a73e8",
+  fillColor: "#4c8dff",
   fillOpacity: 0.12,
   interactive: false,
   pane: "user",
@@ -262,7 +263,7 @@ const userMarker = L.circleMarker([0, 0], {
   radius: 8,
   color: "#fff",
   weight: 3,
-  fillColor: "#1a73e8",
+  fillColor: "#4c8dff",
   fillOpacity: 1,
   interactive: false, // taps pass through to the bubble underneath
   pane: "user",
