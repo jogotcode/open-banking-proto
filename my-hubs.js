@@ -206,6 +206,7 @@ function openMyHubs(focusHubId) {
   if (!filterPanel.hidden) filterToggle.click(); // panels open in the same spot
   if (typeof closeWallet === "function") closeWallet();
   if (typeof closeFriends === "function") closeFriends();
+  if (typeof closeOffers === "function") closeOffers();
   renderMyHubs();
   myHubsPanel.hidden = false;
   myHubsToggle.classList.add("active");

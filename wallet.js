@@ -179,6 +179,12 @@ function purchaseForm(card) {
 }
 
 function txRow(tx) {
+  if (tx.credit) {
+    return `<li class="credit">
+    <span><strong>${escapeHtml(tx.merchant)}</strong><small>${formatDate(tx.at)}</small></span>
+    <span>+${formatCents(-tx.amount)}</span>
+  </li>`;
+  }
   return `<li class="${tx.approved ? "" : "declined"}">
     <span><strong>${escapeHtml(tx.merchant)}</strong><small>${tx.approved ? formatDate(tx.at) : escapeHtml(tx.declineReason)}</small></span>
     <span>${tx.approved ? "-" : ""}${formatCents(tx.amount)}${tx.approved ? "" : " · Declined"}</span>
@@ -195,7 +201,9 @@ function cardBlock(card) {
     lastPurchase?.cardId === card.id
       ? `<p class="buy-result ${lastPurchase.tx.approved ? "ok" : "no"}">${
           lastPurchase.tx.approved
-            ? `✓ Approved: ${formatCents(lastPurchase.tx.amount)} at ${escapeHtml(lastPurchase.tx.merchant)}`
+            ? `✓ Approved: ${formatCents(lastPurchase.tx.amount)} at ${escapeHtml(lastPurchase.tx.merchant)}${
+                lastPurchase.tx.cashback ? ` · +${formatCents(lastPurchase.tx.cashback)} back from ${escapeHtml(brandFor(hubById(card.hubId)).name)}` : ""
+              }`
             : `✕ Declined: ${escapeHtml(lastPurchase.tx.declineReason)}`
         }</p>`
       : "";
@@ -264,6 +272,7 @@ function openWallet(focusCardId) {
   if (!filterPanel.hidden) filterToggle.click();
   closeMyHubs();
   if (typeof closeFriends === "function") closeFriends();
+  if (typeof closeOffers === "function") closeOffers();
   renderWallet();
   walletPanel.hidden = false;
   walletToggle.classList.add("active");

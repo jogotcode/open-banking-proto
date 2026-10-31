@@ -189,6 +189,19 @@ function joinFooter(hub, sub) {
           <button type="button" data-action="join">${label}</button>`;
 }
 
+// Perks for hubs a brand sponsors.
+function brandBanner(hub) {
+  const brand = brandFor(hub);
+  if (!brand) return "";
+  return `<div class="brand-banner" style="--brand:${brand.color}">
+      <span class="brand-logo">${escapeHtml(brand.name[0])}</span>
+      <div>
+        <strong>Sponsored by ${escapeHtml(brand.name)}</strong>
+        <ul>${brand.benefits.map((b) => `<li>${escapeHtml(b.title)}</li>`).join("")}</ul>
+      </div>
+    </div>`;
+}
+
 // Startup status for hubs created by users: timeline + creator's demo tools.
 function startupSection(hub) {
   if (!hub.userCreated) return "";
@@ -243,6 +256,7 @@ function renderJoinDialog(hub, distanceKm) {
       <div><span>Since</span><strong>${hub.founded}</strong></div>
     </div>
 
+    ${brandBanner(hub)}
     ${startupSection(hub)}
 
     <section>

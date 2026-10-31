@@ -259,6 +259,21 @@ function simulatePurchase(card, merchant, amount) {
     declineReason: decline,
   };
   card.transactions.unshift(tx);
+
+  // Brand perk: paying at the sponsor's own store earns cash back onto the card.
+  const brand = brandFor(state.hub);
+  if (tx.approved && brand && merchant.name === brand.merchant) {
+    tx.cashback = Math.round(tx.amount * brand.cashback * 100) / 100;
+    card.transactions.unshift({
+      id: `${tx.id}_cb`,
+      merchant: `${brand.name} cash back`,
+      amount: -tx.cashback, // a credit: adds to what's left on the card
+      at: tx.at,
+      approved: true,
+      credit: true,
+    });
+  }
+
   VirtualCards.save();
   return tx;
 }

@@ -19,12 +19,13 @@
     </form>
 
     <div class="chips">
+      <button id="offers-toggle" type="button" class="chip-btn promo-chip" aria-expanded="false" aria-controls="offers">✦ Offers</button>
       <button id="my-hubs-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="my-hubs">My hubs</button>
       <button id="create-toggle" type="button" class="chip-btn create-chip">+ Start a hub</button>
       <button id="wallet-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="wallet">Wallet</button>
       <button id="friends-toggle" type="button" class="chip-btn" aria-expanded="false" aria-controls="friends">Friends</button>
       <button id="filter-toggle" type="button" class="chip-btn" aria-expanded="false">Value: All ▾</button>
-      <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate location</button>
+      <button id="pick-location" type="button" class="chip-btn" title="Prototype: set your location by clicking the map">Simulate</button>
       <span id="location-status" class="chip-btn static">Location off</span>
     </div>
 
@@ -72,6 +73,14 @@
     <div id="friends-body" class="panel-body"></div>
   </aside>
 
+  <aside id="offers" class="side-panel" aria-label="Offers" hidden>
+    <header class="panel-head">
+      <h2>Offers</h2>
+      <button id="offers-close" type="button" class="icon-btn" aria-label="Close">×</button>
+    </header>
+    <div id="offers-body" class="panel-body"></div>
+  </aside>
+
   <div id="status" class="status" hidden></div>
 
   <dialog id="join-dialog" class="join-dialog" aria-label="Bubble details">
@@ -97,6 +106,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="cities.js"></script>
   <script src="hubs.js"></script>
+  <script src="brands.js"></script>
   <script src="auth.js"></script>
   <script src="join.js"></script>
   <script src="funds.js"></script>
@@ -108,5 +118,6 @@
   <script src="wallet.js"></script>
   <script src="create-hub.js"></script>
   <script src="friends.js"></script>
+  <script src="offers.js"></script>
 </body>
 </html>

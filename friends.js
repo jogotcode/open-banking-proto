@@ -94,7 +94,7 @@ function renderFriends() {
       ${groups
         .map(
           (g) => `<button type="button" class="group-row" data-action="view-group" data-id="${g.id}">
-            <span class="group-mark" style="--hub-color:${colorFor(g.value)}">${initial(g)}</span>
+            <span class="group-net">${groupNetwork(g, { compact: true })}</span>
             <span><strong>${escapeHtml(g.name)}</strong><small>${plural(g.members, "member")} · ${formatMoney(g.monthlyFee)}/month each</small></span>
             <span class="chev" aria-hidden="true">›</span>
           </button>`
@@ -127,6 +127,7 @@ function renderFriends() {
 
 function openFriends() {
   if (!filterPanel.hidden) filterToggle.click();
+  if (typeof closeOffers === "function") closeOffers();
   closeMyHubs();
   closeWallet();
   renderFriends();
@@ -334,6 +335,105 @@ function openCreateGroup() {
   if (!groupDialog.open) groupDialog.showModal();
 }
 
+// --- Group network: members as silhouettes around the pool -------------------
+
+// One person: a round badge with a head-and-shoulders silhouette inside.
+function silhouette(x, y, r, cls) {
+  const k = r / 20;
+  return `<g class="net-person ${cls}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+    <g class="net-pop"><g transform="scale(${k})">
+      <circle r="20" class="net-node"/>
+      <circle cy="-5" r="7" class="net-figure"/>
+      <path d="M-12 15 C-12 6 -6 3 0 3 C6 3 12 6 12 15 Z" class="net-figure"/>
+    </g></g></g>`;
+}
+
+function groupNetwork(group, { compact = false } = {}) {
+  const me = Auth.user();
+  const r = group.record;
+  const people = [
+    ...r.members.map((id) => ({ id, user: Auth._users[id], joined: true })),
+    ...r.invites
+      .filter((i) => i.status === "pending" && !r.members.includes(i.userId))
+      .map((i) => ({ id: i.userId, user: Auth._users[i.userId], joined: false })),
+  ].filter((p) => p.user);
+
+  const W = compact ? 120 : 360;
+  const H = compact ? 72 : 260;
+  const cx = W / 2;
+  const cy = compact ? H / 2 : 118;
+  const rx = compact ? 46 : 132;
+  const ry = compact ? 26 : 84;
+  const nodeR = compact ? 8 : 20;
+  const centerR = compact ? 12 : 36;
+  const animate = !compact && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Spread people evenly around an ellipse, starting at the top.
+  const pts = people.map((p, i) => {
+    const a = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, people.length);
+    return { ...p, x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a), delay: 0.15 + i * 0.12 };
+  });
+  const joined = pts.filter((p) => p.joined);
+
+  // Ring through the members, so everyone is linked to their neighbors too.
+  const ring =
+    joined.length >= 3
+      ? `<path class="net-ring" d="M${joined.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L")} Z"/>`
+      : joined.length === 2
+        ? `<line class="net-ring" x1="${joined[0].x}" y1="${joined[0].y}" x2="${joined[1].x}" y2="${joined[1].y}"/>`
+        : "";
+
+  const spokes = pts
+    .map(
+      (p) => `<line class="net-line ${p.joined ? "" : "pending"} ${animate && p.joined ? "draw" : ""}" pathLength="1"
+        x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${cx}" y2="${cy}" style="--d:${p.delay}s"/>`
+    )
+    .join("");
+
+  // Dots travelling from each member to the pool: their monthly payments.
+  const flows = animate
+    ? joined
+        .map(
+          (p, i) => `<circle r="3" class="net-flow"><animateMotion dur="2.6s" begin="${(1 + i * 0.45).toFixed(2)}s" repeatCount="indefinite"
+            path="M${p.x.toFixed(1)} ${p.y.toFixed(1)} L${cx} ${cy}"/></circle>`
+        )
+        .join("")
+    : "";
+
+  const people_ = pts
+    .map((p) => {
+      const isMe = p.id === me?.id;
+      const isOrganizer = p.id === r.organizerId;
+      const cls = [p.joined ? "" : "pending", isMe ? "me" : "", animate ? "anim" : ""].join(" ");
+      const label = compact
+        ? ""
+        : `<text class="net-name" x="${p.x.toFixed(1)}" y="${(p.y + nodeR + 14).toFixed(1)}">${escapeHtml(isMe ? "You" : p.user.name.split(" ")[0])}</text>
+           ${p.joined ? "" : `<text class="net-sub" x="${p.x.toFixed(1)}" y="${(p.y + nodeR + 26).toFixed(1)}">Invited</text>`}`;
+      const badge =
+        !compact && isOrganizer
+          ? `<g class="net-badge" transform="translate(${(p.x + nodeR * 0.75).toFixed(1)} ${(p.y - nodeR * 0.75).toFixed(1)})"><circle r="8"/><text y="3.5">★</text></g>`
+          : "";
+      return `<g style="--d:${p.delay}s">${silhouette(p.x, p.y, nodeR, cls)}${badge}${label}</g>`;
+    })
+    .join("");
+
+  const center = `<g class="net-center ${animate ? "anim" : ""}">
+      <circle cx="${cx}" cy="${cy}" r="${centerR}"/>
+      ${
+        compact
+          ? `<text x="${cx}" y="${cy + 4}" class="net-center-mini">$</text>`
+          : `<text x="${cx}" y="${cy - 2}" class="net-center-value">${formatShort(group.value)}</text>
+             <text x="${cx}" y="${cy + 14}" class="net-center-label">pool</text>`
+      }
+    </g>`;
+
+  const joinedCount = joined.length;
+  const label = `${group.name}: ${joinedCount} member${joinedCount === 1 ? "" : "s"}${pts.length > joinedCount ? ` and ${pts.length - joinedCount} invited` : ""}, connected to a ${formatShort(group.value)} pool`;
+  return `<svg class="net ${compact ? "compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(label)}" style="--hub-color:${colorFor(group.value)}">
+    ${ring}${spokes}${flows}${center}${people_}
+  </svg>`;
+}
+
 // --- Group dialog: view -------------------------------------------------------
 
 function memberRows(group) {
@@ -393,6 +493,7 @@ function renderViewGroup() {
       </div>
       <button type="button" class="icon-btn" data-action="close" aria-label="Close">×</button>
     </header>
+    <div class="network">${groupNetwork(group)}</div>
     <div class="dlg-stats">
       <div><span>Pool</span><strong>${formatMoney(group.value)}</strong></div>
       <div><span>Members</span><strong>${group.members}</strong></div>

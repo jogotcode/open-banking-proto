@@ -223,7 +223,9 @@ function styleHub(hub) {
   hub.coverage.setStyle({ color, fillColor: color });
   hub.marker.getElement()?.classList.toggle("hub-in-range", inRange);
   const label = forming ? `Forming · ${hub.members}/${hub.minMembers}` : formatShort(hub.value);
-  hub.marker.setTooltipContent(`${joined ? "✓ " : ""}${label}`);
+  const brand = brandFor(hub);
+  const mark = brand ? `<span class="brand-mark" style="--brand:${brand.color}" title="Sponsored by ${brand.name}">${brand.name[0]}</span>` : "";
+  hub.marker.setTooltipContent(`${mark}${joined ? "✓ " : ""}${label}`);
 }
 
 hubsReady = true;
