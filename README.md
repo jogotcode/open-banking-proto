@@ -37,6 +37,15 @@ python3 -m http.server 8000
 
 Browsers only allow location on `localhost` or HTTPS, so host it on HTTPS when testing on a phone.
 
+### Test on your phone (GitHub Pages)
+
+1. **Settings → General → Danger Zone → Change visibility → Make public** (Pages is free for public repos).
+2. **Settings → Pages → Build and deployment → Deploy from a branch**, pick `claude/financial-map-prototype-roqfmg` and `/ (root)`, then **Save**.
+3. After about a minute, open **https://jogotcode.github.io/open-banking-proto/** on your phone. It's HTTPS, so location and sign-up work.
+4. Optional: **Add to Home Screen** (Safari: Share → Add to Home Screen; Chrome: ⋮ → Add to Home screen) to open it full screen like an app.
+
+The site redeploys automatically whenever that branch is updated.
+
 Files: `index.html` (layout), `styles.css`, `cities.js` (seed city list), `hubs.js` (generated hub details and rules), `join.js` (join dialog + saved subscriptions), `app.js` (map, basemaps, location, search, filter), `my-hubs.js` (My hubs panel), `auth.js` (accounts, sessions, saved payment methods), `account.js` (sign up / log in / account / payment dialog), `funds.js` (requests, virtual cards, spending rules), `wallet.js` (request dialog + Wallet panel), `startup.js` (user-created hubs, startup lifecycle, timeline), `create-hub.js` (Start a hub form), `groups.js` (friend codes, friendships, groups), `friends.js` (Friends panel, group dialog, group network graphic), `brands.js` (brand sponsors and perks), `offers.js` (Offers panel).
 
 ## Notes for production

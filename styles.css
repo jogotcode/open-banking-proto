@@ -67,8 +67,9 @@ button.secondary {
 
 .topbar {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  /* Clear the notch / status bar when running full screen on a phone. */
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
   z-index: 1100;
   display: flex;
   flex-wrap: wrap;
@@ -218,7 +219,7 @@ button.secondary {
 
 .status {
   position: fixed;
-  bottom: 28px;
+  bottom: calc(28px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   max-width: calc(100% - 32px);
@@ -1203,6 +1204,7 @@ details.past summary { margin: 12px 4px; color: var(--muted); font-size: 14px; c
     max-height: 75vh;
     border-radius: 16px 16px 0 0;
   }
+  .side-panel .panel-body { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 
   .searchbox { flex-basis: 100%; }
   .status { bottom: 120px; }
@@ -1396,3 +1398,8 @@ details.past summary { margin: 12px 4px; color: var(--muted); font-size: 14px; c
 @media (prefers-reduced-motion: reduce) {
   .net-line.draw, .net-person.anim .net-pop, .net-center.anim circle { animation: none; stroke-dashoffset: 0; }
 }
+
+/* Keep map controls above the phone's home bar and away from rounded corners. */
+.leaflet-bottom { bottom: env(safe-area-inset-bottom, 0px); }
+.leaflet-left { left: env(safe-area-inset-left, 0px); }
+.leaflet-right { right: env(safe-area-inset-right, 0px); }
